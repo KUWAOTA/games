@@ -451,7 +451,7 @@
         let player = {
             x: 80, y: GROUND_Y, vy: 0,
             w: 16, h: 28,
-            hp: 500, maxHp: 500,
+            hp: 350, maxHp: 350,
             grounded: true,
             frame: 0, frameTimer: 0,
             facing: 1,
@@ -1302,8 +1302,8 @@
 
                 // Collision (player can't see them!)
                 if (player.invincible <= 0 && checkCollision(player, enemy)) {
-                    player.hp -= Math.floor(enemy.damage / 2); // Damage halved
-                    player.invincible = 2.5; // Longer invincibility
+                    player.hp -= Math.floor(enemy.damage * 0.75); // Damage slightly higher than halved
+                    player.invincible = 1.8; // Shorter invincibility
                     screenShake = 10;
                     showDialogue(randomDialogue('onHitPhantom'), 'hurt', 2000);
                     spawnParticles(player.x, player.y - 20, [200, 50, 100], 8);
@@ -1320,8 +1320,8 @@
             // Check phantom obstacles
             for (const obs of phantomObstacles) {
                 if (player.invincible <= 0 && checkCollision(player, obs)) {
-                    player.hp -= 4; // Damage halved from 8
-                    player.invincible = 2; // Longer invincibility
+                    player.hp -= 6; // Damage slightly higher than halved
+                    player.invincible = 1.5; // Shorter invincibility
                     screenShake = 5;
                     showDialogue(randomDialogue('onHitObstacle'), 'hurt', 1800);
                     spawnParticles(player.x, player.y - 10, [100, 80, 60], 5);
@@ -1498,7 +1498,7 @@
             player.x = 80;
             player.y = GROUND_Y;
             player.vy = 0;
-            player.hp = 500;
+            player.hp = 350;
             player.invincible = 0;
             player.distance = 0;
             player.frame = 0;

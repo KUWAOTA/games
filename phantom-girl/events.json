@@ -2,7 +2,7 @@
     "config": {
         "title": "ファントムガール",
         "subtitle": "Phantom Girl",
-        "stageLength": 5000,
+        "stageLength": 6500,
         "playerSpeed": 4,
         "jumpForce": 12,
         "gravity": 0.5,
@@ -70,7 +70,7 @@
             "color": "rgba(20, 0, 30, 0.55)",
             "speed": 2,
             "damage": 20,
-            "spawnChance": 0.15
+            "spawnChance": 0.22
         },
         {
             "type": "reaching_hand",
@@ -81,7 +81,7 @@
             "color": "rgba(50, 20, 30, 0.5)",
             "speed": 0,
             "damage": 15,
-            "spawnChance": 0.12
+            "spawnChance": 0.18
         },
         {
             "type": "faceless_figure",
@@ -92,7 +92,7 @@
             "color": "rgba(30, 10, 25, 0.5)",
             "speed": 1,
             "damage": 12,
-            "spawnChance": 0.12
+            "spawnChance": 0.18
         },
         {
             "type": "whispering_dark",
@@ -103,7 +103,7 @@
             "color": "rgba(10, 0, 15, 0.35)",
             "speed": 0.5,
             "damage": 8,
-            "spawnChance": 0.1
+            "spawnChance": 0.15
         }
     ],
     "phantomObstacles": [
@@ -150,49 +150,49 @@
     ],
     "environmentEvents": [
         {
-            "triggerDistance": 300,
+            "triggerDistance": 400,
             "type": "flash",
             "description": "最初のフラッシュバック",
             "dialogue": "...！あの手が...！来ないで...！"
         },
         {
-            "triggerDistance": 800,
+            "triggerDistance": 1000,
             "type": "darken",
             "description": "暗闇が迫る",
             "dialogue": "暗い...あの夜と同じ暗さ...同じ匂い..."
         },
         {
-            "triggerDistance": 1400,
+            "triggerDistance": 1800,
             "type": "flash",
             "description": "フラッシュバック - 声",
             "dialogue": "「逃げるな」...聞こえる...あの声がまだ追いかけてくる..."
         },
         {
-            "triggerDistance": 2000,
+            "triggerDistance": 2800,
             "type": "distort",
             "description": "視界の歪み",
             "dialogue": "世界が歪んでる...あの夜からずっと...元に戻れない..."
         },
         {
-            "triggerDistance": 2800,
+            "triggerDistance": 3800,
             "type": "darken",
             "description": "深い闇",
             "dialogue": "助けてって叫んだのに...誰も来なかった...誰も..."
         },
         {
-            "triggerDistance": 3400,
+            "triggerDistance": 4800,
             "type": "rain",
             "description": "雨が降り始める",
             "dialogue": "雨...あの日も雨だった...帰り道のあの角で..."
         },
         {
-            "triggerDistance": 4000,
+            "triggerDistance": 5600,
             "type": "flash",
             "description": "フラッシュバック - 記憶",
             "dialogue": "思い出したくない...ウェでも体は全部覚えてる...全部..."
         },
         {
-            "triggerDistance": 4400,
+            "triggerDistance": 6100,
             "type": "lighten",
             "description": "光が差す",
             "dialogue": "...光...？あれは...病院の明かり...？"

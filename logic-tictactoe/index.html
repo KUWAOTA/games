@@ -407,13 +407,69 @@
                 font-size: 1.4rem;
             }
 
+            header {
+                padding: 30px 10px 10px;
+            }
+
+            .controls {
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .controls label {
+                font-size: 0.8rem;
+            }
+
+            .game-info {
+                padding: 5px 10px;
+            }
+
+            .turn-indicator {
+                font-size: 1rem;
+                padding: 6px 16px;
+            }
+
             .cell {
-                width: 50px;
-                height: 50px;
+                width: calc((100vw - 80px) / var(--board-size, 4));
+                height: calc((100vw - 80px) / var(--board-size, 4));
+                max-width: 60px;
+                max-height: 60px;
             }
 
             .cell .symbol {
-                font-size: 1.3rem;
+                font-size: 1.2rem;
+            }
+
+            .cell .prop-label {
+                font-size: 0.5rem;
+            }
+
+            .deps-panel,
+            .chain-log,
+            .rule-box {
+                padding: 10px 15px;
+            }
+
+            .dep-item {
+                font-size: 0.65rem;
+                padding: 3px 7px;
+            }
+
+            .rule-box ul {
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .cell {
+                width: calc((100vw - 60px) / var(--board-size, 4));
+                height: calc((100vw - 60px) / var(--board-size, 4));
+                max-width: 45px;
+                max-height: 45px;
+            }
+
+            .cell .symbol {
+                font-size: 1rem;
             }
         }
     </style>
@@ -544,6 +600,7 @@
             const board = document.getElementById('board');
             board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
             board.innerHTML = '';
+            document.documentElement.style.setProperty('--board-size', size);
 
             for (let i = 0; i < size * size; i++) {
                 const cell = document.createElement('div');

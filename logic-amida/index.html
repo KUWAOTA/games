@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>論理回路あみだくじ | Logic Circuit Amidakuji</title>
+    <meta name="description" content="ランダム生成の論理回路を辿るあみだくじゲーム。入力を予測して正解を導け！">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --bg2: #12121a;
+            --accent: #ffeaa7;
+            --accent2: #fdcb6e;
+            --gate-and: #00cec9;
+            --gate-or: #a29bfe;
+            --gate-not: #fd79a8;
+            --gate-xor: #fab1a0;
+            --wire-on: #55efc4;
+            --wire-off: #636e72;
+            --text: #e8e8f0;
+            --text2: #8888a0;
+            --border: rgba(255, 234, 167, 0.2);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px 10px;
+        }
+
+        header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text2);
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .controls button,
+        .controls select {
+            background: var(--bg2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 20px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .controls button {
+            background: linear-gradient(135deg, var(--accent2), #e17055);
+            color: var(--bg);
+            border: none;
+            font-weight: 700;
+        }
+
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(253, 203, 110, 0.4);
+        }
+
+        .score-bar {
+            display: flex;
+            gap: 30px;
+            padding: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+        }
+
+        .score-val {
+            color: var(--accent);
+        }
+
+        .score-label {
+            color: var(--text2);
+            font-size: 0.7rem;
+        }
+
+        .game-area {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+        }
+
+        .circuit-display {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .circuit-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 29px,
+                    rgba(255, 234, 167, 0.03) 30px);
+            pointer-events: none;
+        }
+
+        .circuit-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: var(--accent2);
+            margin-bottom: 15px;
+        }
+
+        #circuitCanvas {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .question-area {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+        }
+
+        .question-area h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+
+        .input-display {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .input-bit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .input-bit label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text2);
+        }
+
+        .bit-display {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .bit-on {
+            background: rgba(85, 239, 196, 0.15);
+            border: 2px solid var(--wire-on);
+            color: var(--wire-on);
+        }
+
+        .bit-off {
+            background: rgba(99, 110, 114, 0.15);
+            border: 2px solid var(--wire-off);
+            color: var(--wire-off);
+        }
+
+        .output-options {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .output-btn {
+            padding: 12px 24px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 80px;
+        }
+
+        .output-btn:hover {
+            border-color: var(--accent);
+            background: rgba(255, 234, 167, 0.05);
+        }
+
+        .output-btn.correct {
+            border-color: var(--wire-on);
+            background: rgba(85, 239, 196, 0.15);
+            color: var(--wire-on);
+            animation: correctPulse 0.5s;
+        }
+
+        .output-btn.wrong {
+            border-color: var(--gate-not);
+            background: rgba(253, 121, 168, 0.15);
+            color: var(--gate-not);
+            animation: shake 0.5s;
+        }
+
+        @keyframes correctPulse {
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes shake {
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+
+        .result-msg {
+            text-align: center;
+            margin-top: 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            min-height: 25px;
+        }
+
+        .result-msg.correct {
+            color: var(--wire-on);
+        }
+
+        .result-msg.wrong {
+            color: var(--gate-not);
+        }
+
+        .explanation {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text2);
+            line-height: 1.8;
+            display: none;
+        }
+
+        .explanation.show {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 1.3rem;
+            }
+
+            .circuit-display {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../" class="back-link">← BACK</a>
+
+    <header>
+        <h1>論理回路あみだくじ</h1>
+        <p>Logic Circuit Amidakuji</p>
+    </header>
+
+    <div class="controls">
+        <label style="color: var(--text2); font-size: 0.85rem;">難易度:
+            <select id="difficulty">
+                <option value="easy">初級 (2入力)</option>
+                <option value="medium" selected>中級 (3入力)</option>
+                <option value="hard">上級 (4入力)</option>
+            </select>
+        </label>
+        <button onclick="newRound()">NEW CIRCUIT</button>
+    </div>
+
+    <div class="score-bar">
+        <div><span class="score-label">SCORE </span><span class="score-val" id="score">0</span></div>
+        <div><span class="score-label">STREAK </span><span class="score-val" id="streak">0</span></div>
+        <div><span class="score-label">ROUND </span><span class="score-val" id="round">0</span></div>
+    </div>
+
+    <div class="game-area">
+        <div class="circuit-display">
+            <div class="circuit-title">⚡ CIRCUIT DIAGRAM</div>
+            <canvas id="circuitCanvas" height="300"></canvas>
+        </div>
+
+        <div class="question-area">
+            <h3>🔌 INPUT VALUES</h3>
+            <div class="input-display" id="inputDisplay"></div>
+
+            <h3 style="margin-top: 20px;">🎯 PREDICT OUTPUT</h3>
+            <div class="output-options" id="outputOptions"></div>
+
+            <div class="result-msg" id="resultMsg"></div>
+            <div class="explanation" id="explanation"></div>
+        </div>
+    </div>
+
+    <script>
+        const GATES = {
+            AND: { symbol: '&', fn: (a, b) => a & b, color: '#00cec9', name: 'AND' },
+            OR: { symbol: '≥1', fn: (a, b) => a | b, color: '#a29bfe', name: 'OR' },
+            XOR: { symbol: '=1', fn: (a, b) => a ^ b, color: '#fab1a0', name: 'XOR' },
+            NAND: { symbol: '&̄', fn: (a, b) => (a & b) ^ 1, color: '#81ecec', name: 'NAND' },
+            NOR: { symbol: '≥1̄', fn: (a, b) => (a | b) ^ 1, color: '#dfe6e9', name: 'NOR' }
+        };
+
+        let score = 0;
+        let streak = 0;
+        let roundNum = 0;
+        let currentCircuit = null;
+        let answered = false;
+
+        function getDifficulty() {
+            const d = document.getElementById('difficulty').value;
+            if (d === 'easy') return { inputs: 2, layers: 1 };
+            if (d === 'medium') return { inputs: 3, layers: 2 };
+            return { inputs: 4, layers: 3 };
+        }
+
+        function generateCircuit() {
+            const { inputs, layers } = getDifficulty();
+            const gateTypes = Object.keys(GATES);
+            const circuit = { inputs, layers: [], inputValues: [] };
+
+            // Generate random input values
+            for (let i = 0; i < inputs; i++) {
+                circuit.inputValues.push(Math.random() < 0.5 ? 1 : 0);
+            }
+
+            // Build layers of gates (amidakuji style - adjacent pairs)
+            let currentWires = inputs;
+            for (let l = 0; l < layers; l++) {
+                const layer = [];
+                const numGates = Math.max(1, Math.floor(currentWires / 2));
+                const usedWires = new Set();
+
+                for (let g = 0; g < numGates; g++) {
+                    // Pick two adjacent wires
+                    let wireA = g * 2;
+                    let wireB = g * 2 + 1;
+                    if (wireB >= currentWires) break;
+
+                    const gateType = gateTypes[Math.floor(Math.random() * gateTypes.length)];
+                    layer.push({
+                        type: gateType,
+                        inputA: wireA,
+                        inputB: wireB,
+                        output: wireA // output replaces wireA position
+                    });
+                }
+                circuit.layers.push(layer);
+                // After processing, wires reduce: each gate pair -> one output
+                // But for amidakuji, we keep same number of wires, gates just transform values
+            }
+
+            return circuit;
+        }
+
+        function evaluateCircuit(circuit) {
+            let wires = [...circuit.inputValues];
+            const steps = [];
+
+            for (const layer of circuit.layers) {
+                const newWires = [...wires];
+                for (const gate of layer) {
+                    const a = wires[gate.inputA];
+                    const b = wires[gate.inputB];
+                    const result = GATES[gate.type].fn(a, b);
+                    newWires[gate.inputA] = result;
+                    // Pass through the second wire
+                    steps.push(`${gate.type}(${a}, ${b}) = ${result}`);
+                }
+                wires = newWires;
+            }
+
+            // Final output is the XOR/OR of all remaining wires to get a single bit
+            let output = wires[0];
+            for (let i = 1; i < wires.length; i++) {
+                output = output ^ wires[i]; // XOR to combine
+            }
+
+            return { output, wires, steps };
+        }
+
+        function drawCircuit(circuit) {
+            const canvas = document.getElementById('circuitCanvas');
+            const ctx = canvas.getContext('2d');
+
+            const w = canvas.parentElement.clientWidth - 60;
+            canvas.width = Math.max(400, w);
+            canvas.height = 250 + circuit.layers.length * 80;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const wireSpacing = canvas.width / (circuit.inputs + 1);
+            const layerHeight = 80;
+            const startY = 50;
+
+            // Draw input labels
+            ctx.font = '14px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+
+            for (let i = 0; i < circuit.inputs; i++) {
+                const x = wireSpacing * (i + 1);
+
+                // Input label
+                ctx.fillStyle = circuit.inputValues[i] ? '#55efc4' : '#636e72';
+                ctx.fillText(`IN${i}`, x, 25);
+                ctx.fillText(circuit.inputValues[i].toString(), x, 45);
+
+                // Vertical wire from top
+                ctx.strokeStyle = circuit.inputValues[i] ? 'rgba(85, 239, 196, 0.4)' : 'rgba(99, 110, 114, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(x, 55);
+                ctx.lineTo(x, startY + 30);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw each layer
+            let currentValues = [...circuit.inputValues];
+
+            for (let l = 0; l < circuit.layers.length; l++) {
+                const y = startY + 40 + l * layerHeight;
+
+                // Draw vertical wires
+                for (let i = 0; i < circuit.inputs; i++) {
+                    const x = wireSpacing * (i + 1);
+                    ctx.strokeStyle = currentValues[i] ? 'rgba(85, 239, 196, 0.3)' : 'rgba(99, 110, 114, 0.2)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - 30);
+                    ctx.lineTo(x, y + 40);
+                    ctx.stroke();
+                }
+
+                // Draw gates
+                for (const gate of circuit.layers[l]) {
+                    const xA = wireSpacing * (gate.inputA + 1);
+                    const xB = wireSpacing * (gate.inputB + 1);
+                    const gateX = (xA + xB) / 2;
+                    const gateInfo = GATES[gate.type];
+
+                    // Horizontal connector (amidakuji bar)
+                    ctx.strokeStyle = gateInfo.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(xA, y);
+                    ctx.lineTo(xB, y);
+                    ctx.stroke();
+
+                    // Gate box
+                    const boxW = 50, boxH = 30;
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.strokeStyle = gateInfo.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(gateX - boxW / 2, y - boxH / 2, boxW, boxH, 6);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Gate label
+                    ctx.fillStyle = gateInfo.color;
+                    ctx.font = 'bold 11px "JetBrains Mono", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(gate.type, gateX, y);
+
+                    // Evaluate
+                    const result = gateInfo.fn(currentValues[gate.inputA], currentValues[gate.inputB]);
+                    currentValues[gate.inputA] = result;
+                }
+            }
+
+            // Draw output wires and final combination
+            const finalY = startY + 40 + circuit.layers.length * layerHeight;
+
+            for (let i = 0; i < circuit.inputs; i++) {
+                const x = wireSpacing * (i + 1);
+                ctx.strokeStyle = currentValues[i] ? 'rgba(85, 239, 196, 0.4)' : 'rgba(99, 110, 114, 0.2)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(x, finalY - 30);
+                ctx.lineTo(x, finalY + 10);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Wire value label
+                ctx.fillStyle = currentValues[i] ? '#55efc4' : '#636e72';
+                ctx.font = '12px "JetBrains Mono", monospace';
+                ctx.fillText(currentValues[i].toString(), x, finalY + 25);
+            }
+
+            // Final XOR combination
+            const combY = finalY + 45;
+            ctx.fillStyle = 'rgba(255, 234, 167, 0.1)';
+            ctx.strokeStyle = 'rgba(255, 234, 167, 0.5)';
+            ctx.lineWidth = 2;
+            const combW = wireSpacing * (circuit.inputs - 1) + 60;
+            const combX = wireSpacing - 30;
+            ctx.beginPath();
+            ctx.roundRect(combX, combY - 15, combW, 30, 8);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffeaa7';
+            ctx.font = 'bold 12px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('XOR COMBINE → OUTPUT = ?', canvas.width / 2, combY);
+        }
+
+        function newRound() {
+            answered = false;
+            roundNum++;
+            document.getElementById('round').textContent = roundNum;
+            document.getElementById('resultMsg').textContent = '';
+            document.getElementById('resultMsg').className = 'result-msg';
+            document.getElementById('explanation').classList.remove('show');
+
+            currentCircuit = generateCircuit();
+            drawCircuit(currentCircuit);
+
+            // Show inputs
+            const inputDiv = document.getElementById('inputDisplay');
+            inputDiv.innerHTML = '';
+            currentCircuit.inputValues.forEach((val, i) => {
+                inputDiv.innerHTML += `
+                <div class="input-bit">
+                    <label>IN${i}</label>
+                    <div class="bit-display ${val ? 'bit-on' : 'bit-off'}">${val}</div>
+                </div>
+            `;
+            });
+
+            // Show output options
+            const optDiv = document.getElementById('outputOptions');
+            optDiv.innerHTML = `
+            <button class="output-btn" onclick="submitAnswer(0)">0 (FALSE)</button>
+            <button class="output-btn" onclick="submitAnswer(1)">1 (TRUE)</button>
+        `;
+        }
+
+        function submitAnswer(answer) {
+            if (answered) return;
+            answered = true;
+
+            const { output, wires, steps } = evaluateCircuit(currentCircuit);
+            const correct = answer === output;
+
+            const buttons = document.querySelectorAll('.output-btn');
+            buttons.forEach(btn => {
+                const val = parseInt(btn.textContent[0]);
+                if (val === output) btn.classList.add('correct');
+                if (val === answer && !correct) btn.classList.add('wrong');
+            });
+
+            const msg = document.getElementById('resultMsg');
+            if (correct) {
+                score += 10 + streak * 5;
+                streak++;
+                msg.textContent = `✓ CORRECT! +${10 + (streak - 1) * 5}pts`;
+                msg.className = 'result-msg correct';
+            } else {
+                streak = 0;
+                msg.textContent = '✗ WRONG!';
+                msg.className = 'result-msg wrong';
+            }
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('streak').textContent = streak;
+
+            // Show explanation
+            const exp = document.getElementById('explanation');
+            exp.innerHTML = `<strong>回路の解説:</strong><br>` +
+                steps.map(s => `  ${s}`).join('<br>') +
+                `<br>最終出力 (XOR combine): <strong>${output}</strong>` +
+                `<br><br><button onclick="newRound()" style="padding:8px 20px; background: linear-gradient(135deg, #fdcb6e, #e17055); color: #0a0a0f; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">NEXT →</button>`;
+            exp.classList.add('show');
+        }
+
+        // Init
+        newRound();
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            if (currentCircuit) drawCircuit(currentCircuit);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>命題論理マルバツ | Logic Tic-Tac-Toe</title>
+    <meta name="description" content="各マスが命題のマルバツゲーム。論理的依存関係で連鎖確定する知的対戦ゲーム。">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --bg2: #12121a;
+            --accent: #6c5ce7;
+            --accent2: #a29bfe;
+            --o-color: #00cec9;
+            --x-color: #fd79a8;
+            --chain-color: #ffeaa7;
+            --text: #e8e8f0;
+            --text2: #8888a0;
+            --border: rgba(108, 92, 231, 0.3);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 0.9rem;
+            z-index: 100;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--accent2);
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px 20px;
+        }
+
+        header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--accent2), var(--o-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text2);
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+
+        .controls label {
+            color: var(--text2);
+            font-size: 0.85rem;
+        }
+
+        .controls select,
+        .controls button {
+            background: var(--bg2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .controls select:hover,
+        .controls button:hover {
+            border-color: var(--accent);
+        }
+
+        .controls button {
+            background: linear-gradient(135deg, var(--accent), #5a4bd1);
+            border: none;
+            font-weight: 700;
+        }
+
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+        }
+
+        .game-info {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 20px;
+            flex-wrap: wrap;
+        }
+
+        .turn-indicator {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            padding: 8px 24px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .turn-o {
+            border-color: var(--o-color);
+            color: var(--o-color);
+        }
+
+        .turn-x {
+            border-color: var(--x-color);
+            color: var(--x-color);
+        }
+
+        .board-container {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .board {
+            display: grid;
+            gap: 3px;
+            background: var(--border);
+            border-radius: 12px;
+            padding: 3px;
+            box-shadow: 0 0 40px rgba(108, 92, 231, 0.1);
+        }
+
+        .cell {
+            width: 70px;
+            height: 70px;
+            background: var(--bg2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            border-radius: 4px;
+        }
+
+        .cell:hover:not(.filled) {
+            background: rgba(108, 92, 231, 0.15);
+        }
+
+        .cell .prop-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text2);
+            position: absolute;
+            top: 3px;
+            left: 5px;
+        }
+
+        .cell .symbol {
+            font-size: 1.8rem;
+            font-weight: 900;
+            font-family: 'Orbitron', sans-serif;
+            line-height: 1;
+        }
+
+        .cell.val-o .symbol {
+            color: var(--o-color);
+        }
+
+        .cell.val-x .symbol {
+            color: var(--x-color);
+        }
+
+        .cell.chained {
+            animation: chainPulse 0.6s ease-out;
+        }
+
+        .cell.win-cell {
+            animation: winGlow 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes chainPulse {
+            0% {
+                background: rgba(255, 234, 167, 0.4);
+                transform: scale(1.1);
+            }
+
+            100% {
+                background: var(--bg2);
+                transform: scale(1);
+            }
+        }
+
+        @keyframes winGlow {
+            0% {
+                box-shadow: inset 0 0 15px rgba(108, 92, 231, 0.3);
+            }
+
+            100% {
+                box-shadow: inset 0 0 25px rgba(108, 92, 231, 0.7);
+            }
+        }
+
+        .deps-panel {
+            max-width: 600px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .deps-panel h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: var(--accent2);
+            margin-bottom: 10px;
+        }
+
+        .dep-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .dep-item {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            background: rgba(108, 92, 231, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text2);
+        }
+
+        .dep-item.dep-implication {
+            border-color: rgba(0, 206, 201, 0.3);
+        }
+
+        .dep-item.dep-equivalence {
+            border-color: rgba(162, 155, 254, 0.3);
+        }
+
+        .dep-item.dep-exclusion {
+            border-color: rgba(253, 121, 168, 0.3);
+        }
+
+        .win-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 15, 0.9);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+
+        .win-overlay.show {
+            display: flex;
+        }
+
+        .win-overlay h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: winPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .win-overlay .win-o {
+            color: var(--o-color);
+        }
+
+        .win-overlay .win-x {
+            color: var(--x-color);
+        }
+
+        .win-overlay .win-draw {
+            color: var(--chain-color);
+        }
+
+        .win-overlay button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, var(--accent), #5a4bd1);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .win-overlay button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.5);
+        }
+
+        @keyframes winPop {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .chain-log {
+            max-width: 600px;
+            width: 100%;
+            padding: 10px 20px;
+            margin-bottom: 40px;
+        }
+
+        .chain-log h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: var(--chain-color);
+            margin-bottom: 8px;
+        }
+
+        .chain-log-entries {
+            max-height: 120px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text2);
+            line-height: 1.8;
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 1.4rem;
+            }
+
+            .cell {
+                width: 50px;
+                height: 50px;
+            }
+
+            .cell .symbol {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../" class="back-link">← BACK</a>
+
+    <header>
+        <h1>命題論理マルバツ</h1>
+        <p>Propositional Logic Tic-Tac-Toe</p>
+    </header>
+
+    <div class="controls">
+        <label>ボードサイズ:
+            <select id="boardSize">
+                <option value="3">3×3</option>
+                <option value="4" selected>4×4 (推奨)</option>
+                <option value="5">5×5</option>
+                <option value="6">6×6</option>
+            </select>
+        </label>
+        <label>勝利条件:
+            <select id="winLength">
+                <option value="3">3連続</option>
+                <option value="4">4連続</option>
+            </select>
+        </label>
+        <button id="newGameBtn" onclick="newGame()">NEW GAME</button>
+    </div>
+
+    <div class="game-info">
+        <div class="turn-indicator" id="turnIndicator">○ の番</div>
+    </div>
+
+    <div class="board-container">
+        <div class="board" id="board"></div>
+    </div>
+
+    <div class="deps-panel">
+        <h3>⚡ DEPENDENCIES</h3>
+        <div class="dep-list" id="depList"></div>
+    </div>
+
+    <div class="chain-log">
+        <h3>🔗 CHAIN LOG</h3>
+        <div class="chain-log-entries" id="chainLog"></div>
+    </div>
+
+    <div class="win-overlay" id="winOverlay">
+        <h2 id="winMessage"></h2>
+        <p id="winDetail" style="color: #8888a0; margin-top: -10px;"></p>
+        <button onclick="closeWin()">もう一度プレイ</button>
+    </div>
+
+    <script>
+        const DEP_TYPES = {
+            IMPLICATION: { symbol: '→', label: '含意', cls: 'dep-implication' },
+            EQUIVALENCE: { symbol: '↔', label: '同値', cls: 'dep-equivalence' },
+            EXCLUSION: { symbol: '⊥', label: '排反', cls: 'dep-exclusion' }
+        };
+
+        let size = 4;
+        let winLen = 4;
+        let cells = [];      // null, 'o', 'x'
+        let playerCells = []; // null, 'o', 'x' - who placed it (for win check)
+        let turn = 'o';
+        let deps = [];
+        let gameOver = false;
+        let chainLogEntries = [];
+
+        function newGame() {
+            size = parseInt(document.getElementById('boardSize').value);
+            winLen = parseInt(document.getElementById('winLength').value);
+            if (winLen > size) winLen = size;
+            cells = new Array(size * size).fill(null);
+            playerCells = new Array(size * size).fill(null);
+            turn = 'o';
+            gameOver = false;
+            chainLogEntries = [];
+            generateDependencies();
+            renderBoard();
+            renderDeps();
+            updateTurn();
+            document.getElementById('chainLog').querySelector('.chain-log-entries').innerHTML = '';
+        }
+
+        function generateDependencies() {
+            deps = [];
+            const n = size * size;
+            const numDeps = Math.floor(n * 0.8) + Math.floor(Math.random() * Math.floor(n * 0.4));
+
+            for (let i = 0; i < numDeps; i++) {
+                const a = Math.floor(Math.random() * n);
+                let b = Math.floor(Math.random() * n);
+                while (b === a) b = Math.floor(Math.random() * n);
+
+                const typeRoll = Math.random();
+                let type;
+                if (typeRoll < 0.4) type = 'IMPLICATION';
+                else if (typeRoll < 0.7) type = 'EQUIVALENCE';
+                else type = 'EXCLUSION';
+
+                // Avoid duplicate or conflicting
+                const exists = deps.some(d =>
+                    (d.a === a && d.b === b) || (d.a === b && d.b === a)
+                );
+                if (!exists) {
+                    deps.push({ a, b, type });
+                }
+            }
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            board.innerHTML = '';
+
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}`;
+                cell.innerHTML = `<span class="prop-label">P${i}</span><span class="symbol"></span>`;
+                cell.onclick = () => placeMove(i);
+                board.appendChild(cell);
+            }
+        }
+
+        function renderDeps() {
+            const list = document.getElementById('depList');
+            list.innerHTML = '';
+            deps.forEach(d => {
+                const info = DEP_TYPES[d.type];
+                const el = document.createElement('span');
+                el.className = `dep-item ${info.cls}`;
+                el.textContent = `P${d.a} ${info.symbol} P${d.b}`;
+                el.title = info.label;
+                list.appendChild(el);
+            });
+        }
+
+        function updateTurn() {
+            const ind = document.getElementById('turnIndicator');
+            if (gameOver) {
+                ind.textContent = 'GAME OVER';
+                ind.className = 'turn-indicator';
+                return;
+            }
+            if (turn === 'o') {
+                ind.textContent = '○ の番';
+                ind.className = 'turn-indicator turn-o';
+            } else {
+                ind.textContent = '× の番';
+                ind.className = 'turn-indicator turn-x';
+            }
+        }
+
+        function placeMove(idx) {
+            if (gameOver || cells[idx] !== null) return;
+
+            cells[idx] = turn;
+            playerCells[idx] = turn;
+            updateCell(idx, false);
+            addChainLog(`Player ${turn === 'o' ? '○' : '×'} → P${idx} = ${turn === 'o' ? 'TRUE' : 'FALSE'}`);
+
+            // Propagate chain
+            propagateChain(idx, turn);
+
+            // Check win
+            const winner = checkWin();
+            if (winner) {
+                gameOver = true;
+                showWin(winner);
+                updateTurn();
+                return;
+            }
+
+            // Check draw
+            if (cells.every(c => c !== null)) {
+                gameOver = true;
+                showWin('draw');
+                updateTurn();
+                return;
+            }
+
+            turn = turn === 'o' ? 'x' : 'o';
+            updateTurn();
+        }
+
+        function propagateChain(idx, val) {
+            let changed = true;
+            let iterations = 0;
+            const maxIter = size * size * 2;
+
+            while (changed && iterations < maxIter) {
+                changed = false;
+                iterations++;
+
+                for (const dep of deps) {
+                    if (dep.type === 'IMPLICATION') {
+                        // a → b: if a is true, b must be true; if b is false, a must be false
+                        if (cells[dep.a] === 'o' && cells[dep.b] === null) {
+                            cells[dep.b] = 'o';
+                            playerCells[dep.b] = playerCells[dep.a]; // same player credit
+                            updateCell(dep.b, true);
+                            addChainLog(`  ⚡ P${dep.a}→P${dep.b}: P${dep.b} = TRUE (含意)`);
+                            changed = true;
+                        }
+                        if (cells[dep.b] === 'x' && cells[dep.a] === null) {
+                            cells[dep.a] = 'x';
+                            playerCells[dep.a] = playerCells[dep.b];
+                            updateCell(dep.a, true);
+                            addChainLog(`  ⚡ P${dep.a}→P${dep.b}: P${dep.a} = FALSE (対偶)`);
+                            changed = true;
+                        }
+                    } else if (dep.type === 'EQUIVALENCE') {
+                        // a ↔ b: same value
+                        if (cells[dep.a] !== null && cells[dep.b] === null) {
+                            cells[dep.b] = cells[dep.a];
+                            playerCells[dep.b] = playerCells[dep.a];
+                            updateCell(dep.b, true);
+                            addChainLog(`  ⚡ P${dep.a}↔P${dep.b}: P${dep.b} = ${cells[dep.a] === 'o' ? 'TRUE' : 'FALSE'} (同値)`);
+                            changed = true;
+                        }
+                        if (cells[dep.b] !== null && cells[dep.a] === null) {
+                            cells[dep.a] = cells[dep.b];
+                            playerCells[dep.a] = playerCells[dep.b];
+                            updateCell(dep.a, true);
+                            addChainLog(`  ⚡ P${dep.a}↔P${dep.b}: P${dep.a} = ${cells[dep.b] === 'o' ? 'TRUE' : 'FALSE'} (同値)`);
+                            changed = true;
+                        }
+                    } else if (dep.type === 'EXCLUSION') {
+                        // a ⊥ b: opposite values
+                        if (cells[dep.a] !== null && cells[dep.b] === null) {
+                            cells[dep.b] = cells[dep.a] === 'o' ? 'x' : 'o';
+                            playerCells[dep.b] = playerCells[dep.a];
+                            updateCell(dep.b, true);
+                            addChainLog(`  ⚡ P${dep.a}⊥P${dep.b}: P${dep.b} = ${cells[dep.b] === 'o' ? 'TRUE' : 'FALSE'} (排反)`);
+                            changed = true;
+                        }
+                        if (cells[dep.b] !== null && cells[dep.a] === null) {
+                            cells[dep.a] = cells[dep.b] === 'o' ? 'x' : 'o';
+                            playerCells[dep.a] = playerCells[dep.b];
+                            updateCell(dep.a, true);
+                            addChainLog(`  ⚡ P${dep.a}⊥P${dep.b}: P${dep.a} = ${cells[dep.a] === 'o' ? 'TRUE' : 'FALSE'} (排反)`);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateCell(idx, isChain) {
+            const el = document.getElementById(`cell-${idx}`);
+            const sym = el.querySelector('.symbol');
+            if (cells[idx] === 'o') {
+                sym.textContent = '○';
+                el.classList.add('filled', 'val-o');
+                el.classList.remove('val-x');
+            } else if (cells[idx] === 'x') {
+                sym.textContent = '×';
+                el.classList.add('filled', 'val-x');
+                el.classList.remove('val-o');
+            }
+            if (isChain) {
+                el.classList.add('chained');
+                setTimeout(() => el.classList.remove('chained'), 600);
+            }
+        }
+
+        function checkWin() {
+            // Check rows, cols, diagonals for winLen consecutive same playerCells
+            for (let player of ['o', 'x']) {
+                // Rows
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c <= size - winLen; c++) {
+                        let win = true;
+                        const winCells = [];
+                        for (let k = 0; k < winLen; k++) {
+                            const idx = r * size + c + k;
+                            if (cells[idx] !== player) { win = false; break; }
+                            winCells.push(idx);
+                        }
+                        if (win) { highlightWin(winCells); return player; }
+                    }
+                }
+                // Cols
+                for (let c = 0; c < size; c++) {
+                    for (let r = 0; r <= size - winLen; r++) {
+                        let win = true;
+                        const winCells = [];
+                        for (let k = 0; k < winLen; k++) {
+                            const idx = (r + k) * size + c;
+                            if (cells[idx] !== player) { win = false; break; }
+                            winCells.push(idx);
+                        }
+                        if (win) { highlightWin(winCells); return player; }
+                    }
+                }
+                // Diag ↘
+                for (let r = 0; r <= size - winLen; r++) {
+                    for (let c = 0; c <= size - winLen; c++) {
+                        let win = true;
+                        const winCells = [];
+                        for (let k = 0; k < winLen; k++) {
+                            const idx = (r + k) * size + (c + k);
+                            if (cells[idx] !== player) { win = false; break; }
+                            winCells.push(idx);
+                        }
+                        if (win) { highlightWin(winCells); return player; }
+                    }
+                }
+                // Diag ↗
+                for (let r = winLen - 1; r < size; r++) {
+                    for (let c = 0; c <= size - winLen; c++) {
+                        let win = true;
+                        const winCells = [];
+                        for (let k = 0; k < winLen; k++) {
+                            const idx = (r - k) * size + (c + k);
+                            if (cells[idx] !== player) { win = false; break; }
+                            winCells.push(idx);
+                        }
+                        if (win) { highlightWin(winCells); return player; }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function highlightWin(winCells) {
+            winCells.forEach(idx => {
+                document.getElementById(`cell-${idx}`).classList.add('win-cell');
+            });
+        }
+
+        function showWin(winner) {
+            const overlay = document.getElementById('winOverlay');
+            const msg = document.getElementById('winMessage');
+            const detail = document.getElementById('winDetail');
+            overlay.classList.add('show');
+
+            if (winner === 'draw') {
+                msg.className = 'win-draw';
+                msg.textContent = 'DRAW';
+                detail.textContent = '引き分け — すべてのマスが埋まりました';
+            } else if (winner === 'o') {
+                msg.className = 'win-o';
+                msg.textContent = '○ WIN!';
+                detail.textContent = `○ プレイヤーが${winLen}連続を達成！`;
+            } else {
+                msg.className = 'win-x';
+                msg.textContent = '× WIN!';
+                detail.textContent = `× プレイヤーが${winLen}連続を達成！`;
+            }
+        }
+
+        function closeWin() {
+            document.getElementById('winOverlay').classList.remove('show');
+            newGame();
+        }
+
+        function addChainLog(text) {
+            const log = document.getElementById('chainLog').querySelector('.chain-log-entries');
+            log.innerHTML += text + '<br>';
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Init
+        newGame();
+    </script>
+</body>
+
+</html>

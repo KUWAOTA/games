@@ -1,0 +1,205 @@
+{
+    "config": {
+        "title": "ファントムガール",
+        "subtitle": "Phantom Girl",
+        "stageLength": 8000,
+        "playerSpeed": 3,
+        "jumpForce": 10,
+        "gravity": 0.5,
+        "hospitalName": "希望ヶ丘メンタルクリニック"
+    },
+    "dialogues": {
+        "intro": [
+            "...ここは...どこ？",
+            "あの夜から、何もかもが変わってしまった。",
+            "病院に...行かなきゃ...壊れてしまう前に..."
+        ],
+        "onHitPhantom": [
+            "離して...！もう離してよ...！",
+            "触らないで...！その手で触らないで...！",
+            "やめて...もうやめて...お願いだから...",
+            "「黙れ」って...あの声がまだ耳の奥に残ってる...",
+            "体が覚えてる...忘れたいのに、体が忘れてくれない...",
+            "あの人の息の匂い...まだ鼻の奥にこびりついてる...",
+            "私は物じゃない...物じゃないのに...",
+            "お母さんに言ったら「嘘をつくな」って...嘘じゃないのに...",
+            "「お前のせいだ」って...本当に私のせいなの...？",
+            "あの夜、声を出せなかった...喉が凍りついたみたいに...",
+            "手首の痕...消えない...消したいのに...",
+            "シャワーを何時間浴びても落ちない...あの人の感触が...",
+            "「誰にも言うな」...その言葉が鎖みたいに巻きついてる...",
+            "友達に会えない...私が汚いから...近づいたら汚してしまうから...",
+            "あの部屋の天井の染み...今でも目を閉じると見える...",
+            "先生は「気のせいだ」って言った...気のせいなわけないのに...",
+            "夜が来るのが怖い...眠ったらまたあの夢を見るから..."
+        ],
+        "onHitObstacle": [
+            "ベッド...！あのベッドが見える...！嫌...嫌ぁ...！",
+            "鍵の音...ガチャって...あの時と同じ音...",
+            "密室...逃げ場がない...あの時も逃げられなかった...",
+            "この匂い...この部屋の匂い...吐きそう...",
+            "鏡を見ないで...あの夜の自分が映ってる...",
+            "ドアが...ドアが開かない...また閉じ込められる...",
+            "布が...肌に触れるだけで...全身が震える...",
+            "暗い...暗いのは嫌...あの時も暗かった..."
+        ],
+        "nearGoal": [
+            "あの明かりは...？もしかして...",
+            "まだ歩ける...私はまだ終わってない...",
+            "誰か待っていてくれる...？今度こそ信じていい...？"
+        ],
+        "goalReached": [
+            "...着いた。",
+            "ここでなら...全部、話せるかもしれない。",
+            "もう一人で抱えなくていいの...？",
+            "ありがとう...一緒に来てくれて。"
+        ],
+        "gameOver": [
+            "もう...動けない...",
+            "結局...誰も来てくれなかった...",
+            "ごめんなさい...私が弱いから..."
+        ]
+    },
+    "phantomEnemies": [
+        {
+            "type": "shadow_man",
+            "name": "男の影",
+            "description": "大きな男の輪郭をした影。こちらに手を伸ばしてくる",
+            "width": 35,
+            "height": 55,
+            "color": "rgba(20, 0, 30, 0.55)",
+            "speed": 2,
+            "damage": 20,
+            "spawnChance": 0.3
+        },
+        {
+            "type": "reaching_hand",
+            "name": "伸びてくる手",
+            "description": "暗闇から伸びてくる大きな男の手",
+            "width": 24,
+            "height": 40,
+            "color": "rgba(50, 20, 30, 0.5)",
+            "speed": 0,
+            "damage": 15,
+            "spawnChance": 0.25
+        },
+        {
+            "type": "faceless_figure",
+            "name": "顔のない人影",
+            "description": "顔のない人型の影。じっとこちらを見ている",
+            "width": 30,
+            "height": 50,
+            "color": "rgba(30, 10, 25, 0.5)",
+            "speed": 1,
+            "damage": 12,
+            "spawnChance": 0.25
+        },
+        {
+            "type": "whispering_dark",
+            "name": "囁く闇",
+            "description": "「黙れ」「お前のせいだ」と囁いてくる暗闇",
+            "width": 55,
+            "height": 55,
+            "color": "rgba(10, 0, 15, 0.35)",
+            "speed": 0.5,
+            "damage": 8,
+            "spawnChance": 0.2
+        }
+    ],
+    "phantomObstacles": [
+        {
+            "type": "bed_frame",
+            "name": "ベッドの幻影",
+            "description": "あの夜のベッド。見るだけで体が震える",
+            "width": 50,
+            "height": 30,
+            "color": "rgba(80, 40, 40, 0.45)"
+        },
+        {
+            "type": "locked_door",
+            "name": "鍵のかかったドア",
+            "description": "逃げようとしたが開かなかったドア",
+            "width": 30,
+            "height": 55,
+            "color": "rgba(60, 30, 30, 0.5)"
+        },
+        {
+            "type": "dark_room",
+            "name": "暗い部屋の入口",
+            "description": "あの部屋の入口。中からあの匂いがする",
+            "width": 35,
+            "height": 50,
+            "color": "rgba(15, 5, 20, 0.55)"
+        },
+        {
+            "type": "broken_mirror",
+            "name": "割れた鏡",
+            "description": "自分の姿を見たくない。汚れた自分が映る",
+            "width": 25,
+            "height": 45,
+            "color": "rgba(100, 100, 120, 0.4)"
+        },
+        {
+            "type": "torn_clothes",
+            "name": "破れた布の切れ端",
+            "description": "あの時に破かれた服の記憶",
+            "width": 20,
+            "height": 15,
+            "color": "rgba(70, 50, 60, 0.4)"
+        }
+    ],
+    "environmentEvents": [
+        {
+            "triggerDistance": 400,
+            "type": "flash",
+            "description": "最初のフラッシュバック",
+            "dialogue": "...！あの手が...！来ないで...！"
+        },
+        {
+            "triggerDistance": 1200,
+            "type": "darken",
+            "description": "暗闇が迫る",
+            "dialogue": "暗い...あの夜と同じ暗さ...同じ匂い..."
+        },
+        {
+            "triggerDistance": 2200,
+            "type": "flash",
+            "description": "フラッシュバック - 声",
+            "dialogue": "「逃げるな」...聞こえる...あの声がまだ追いかけてくる..."
+        },
+        {
+            "triggerDistance": 3200,
+            "type": "distort",
+            "description": "視界の歪み",
+            "dialogue": "世界が歪んでる...あの夜からずっと...元に戻れない..."
+        },
+        {
+            "triggerDistance": 4200,
+            "type": "darken",
+            "description": "深い闇",
+            "dialogue": "助けてって叫んだのに...誰も来なかった...誰も..."
+        },
+        {
+            "triggerDistance": 5000,
+            "type": "rain",
+            "description": "雨が降り始める",
+            "dialogue": "雨...あの日も雨だった...帰り道のあの角で..."
+        },
+        {
+            "triggerDistance": 6000,
+            "type": "flash",
+            "description": "フラッシュバック - 記憶",
+            "dialogue": "思い出したくない...でも体は全部覚えてる...全部..."
+        },
+        {
+            "triggerDistance": 6800,
+            "type": "lighten",
+            "description": "光が差す",
+            "dialogue": "...光...？あれは...病院の明かり...？"
+        }
+    ],
+    "credits": {
+        "bgm": "Dark Ambient BGM - Procedural Web Audio",
+        "bgmNote": "本作のBGMはWeb Audio APIによるプロシージャル生成です"
+    }
+}

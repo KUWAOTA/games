@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコード迷路 | QR Maze</title>
+    <meta name="description" content="QRコードが迷路に変身。セルの間を縫ってゴールを目指せ！">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --bg2: #12121a;
+            --accent: #00cec9;
+            --accent2: #81ecec;
+            --wall: #2d3436;
+            --path: #dfe6e9;
+            --player: #6c5ce7;
+            --goal: #fd79a8;
+            --text: #e8e8f0;
+            --text2: #8888a0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 0.9rem;
+            z-index: 100;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--accent2);
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px 20px;
+        }
+
+        header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text2);
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .controls button {
+            background: linear-gradient(135deg, var(--accent), #00b5b0);
+            color: var(--bg);
+            border: none;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 206, 201, 0.4);
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            padding: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .stat-item {
+            color: var(--accent2);
+        }
+
+        .stat-item span {
+            color: var(--text2);
+            font-size: 0.75rem;
+        }
+
+        .maze-wrapper {
+            position: relative;
+            padding: 20px;
+        }
+
+        #mazeCanvas {
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0, 206, 201, 0.15);
+        }
+
+        .mobile-controls {
+            display: none;
+            gap: 5px;
+            padding: 20px;
+            justify-content: center;
+        }
+
+        .d-btn {
+            width: 60px;
+            height: 60px;
+            background: var(--bg2);
+            border: 1px solid rgba(0, 206, 201, 0.3);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .d-btn:active {
+            background: rgba(0, 206, 201, 0.2);
+            transform: scale(0.95);
+        }
+
+        .d-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+        }
+
+        .d-pad .empty {
+            visibility: hidden;
+        }
+
+        .instructions {
+            padding: 20px;
+            color: var(--text2);
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .win-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 15, 0.9);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+
+        .win-overlay.show {
+            display: flex;
+        }
+
+        .win-overlay h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            color: var(--accent);
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .win-overlay p {
+            color: var(--text2);
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        .win-overlay button {
+            margin-top: 25px;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, var(--accent), #00b5b0);
+            color: var(--bg);
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .mobile-controls {
+                display: flex;
+            }
+
+            header h1 {
+                font-size: 1.4rem;
+            }
+        }
+
+        @media (pointer: coarse) {
+            .mobile-controls {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../" class="back-link">← BACK</a>
+
+    <header>
+        <h1>QRコード迷路</h1>
+        <p>Navigate through the QR Code</p>
+    </header>
+
+    <div class="controls">
+        <button onclick="generateMaze()">NEW MAZE</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-item"><span>MOVES </span><span id="moveCount">0</span></div>
+        <div class="stat-item"><span>TIME </span><span id="timer">0:00</span></div>
+    </div>
+
+    <div class="maze-wrapper">
+        <canvas id="mazeCanvas" width="420" height="420"></canvas>
+    </div>
+
+    <div class="mobile-controls">
+        <div class="d-pad">
+            <div class="empty"></div>
+            <button class="d-btn" ontouchstart="move(0,-1);event.preventDefault();" onclick="move(0,-1)">▲</button>
+            <div class="empty"></div>
+            <button class="d-btn" ontouchstart="move(-1,0);event.preventDefault();" onclick="move(-1,0)">◀</button>
+            <div class="empty"></div>
+            <button class="d-btn" ontouchstart="move(1,0);event.preventDefault();" onclick="move(1,0)">▶</button>
+            <div class="empty"></div>
+            <button class="d-btn" ontouchstart="move(0,1);event.preventDefault();" onclick="move(0,1)">▼</button>
+            <div class="empty"></div>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <p>矢印キーまたはWASDで移動 | 🟪 = プレイヤー | 🟥 = ゴール</p>
+    </div>
+
+    <div class="win-overlay" id="winOverlay">
+        <h2>CLEAR!</h2>
+        <p id="winStats"></p>
+        <button onclick="closeWin()">次の迷路へ</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const MAZE_SIZE = 21; // Must be odd for maze gen
+        const CELL_SIZE = Math.floor(420 / MAZE_SIZE);
+
+        let grid = [];
+        let playerX = 1, playerY = 1;
+        let goalX, goalY;
+        let moves = 0;
+        let startTime = 0;
+        let timerInterval = null;
+        let gameWon = false;
+
+        // Colors
+        const COLORS = {
+            wall: '#1a1a2e',
+            path: '#16213e',
+            player: '#6c5ce7',
+            playerGlow: 'rgba(108, 92, 231, 0.4)',
+            goal: '#fd79a8',
+            goalGlow: 'rgba(253, 121, 168, 0.4)',
+            qrDark: '#0f0f1a',
+            qrLight: '#e8e8f0',
+            visited: 'rgba(0, 206, 201, 0.08)',
+            border: '#2d3436'
+        };
+
+        function generateMaze() {
+            gameWon = false;
+            moves = 0;
+            document.getElementById('moveCount').textContent = '0';
+            clearInterval(timerInterval);
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+
+            // Init grid: all walls
+            grid = [];
+            for (let y = 0; y < MAZE_SIZE; y++) {
+                grid[y] = [];
+                for (let x = 0; x < MAZE_SIZE; x++) {
+                    grid[y][x] = 1; // wall
+                }
+            }
+
+            // Generate maze using recursive backtracking
+            carve(1, 1);
+
+            // Add QR-like finder patterns (decorative corners)
+            addFinderPatterns();
+
+            // Set player & goal
+            playerX = 1;
+            playerY = 1;
+            grid[1][1] = 0;
+
+            // Find goal: furthest reachable point
+            let maxDist = 0;
+            goalX = MAZE_SIZE - 2;
+            goalY = MAZE_SIZE - 2;
+
+            for (let y = 1; y < MAZE_SIZE - 1; y++) {
+                for (let x = 1; x < MAZE_SIZE - 1; x++) {
+                    if (grid[y][x] === 0) {
+                        const dist = Math.abs(x - 1) + Math.abs(y - 1);
+                        if (dist > maxDist) {
+                            maxDist = dist;
+                            goalX = x;
+                            goalY = y;
+                        }
+                    }
+                }
+            }
+
+            draw();
+        }
+
+        function carve(x, y) {
+            grid[y][x] = 0;
+            const dirs = shuffleArray([[0, -2], [0, 2], [-2, 0], [2, 0]]);
+
+            for (const [dx, dy] of dirs) {
+                const nx = x + dx, ny = y + dy;
+                if (nx > 0 && nx < MAZE_SIZE - 1 && ny > 0 && ny < MAZE_SIZE - 1 && grid[ny][nx] === 1) {
+                    grid[y + dy / 2][x + dx / 2] = 0;
+                    carve(nx, ny);
+                }
+            }
+        }
+
+        function addFinderPatterns() {
+            // Add QR-style finder pattern borders (decorative, don't block paths)
+            const patterns = [
+                { ox: 0, oy: 0 },
+                { ox: MAZE_SIZE - 7, oy: 0 },
+                { ox: 0, oy: MAZE_SIZE - 7 }
+            ];
+            // We just mark these visually, don't change walkability
+        }
+
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function draw() {
+            // Resize canvas
+            canvas.width = MAZE_SIZE * CELL_SIZE;
+            canvas.height = MAZE_SIZE * CELL_SIZE;
+
+            // Draw QR-style background
+            for (let y = 0; y < MAZE_SIZE; y++) {
+                for (let x = 0; x < MAZE_SIZE; x++) {
+                    const px = x * CELL_SIZE;
+                    const py = y * CELL_SIZE;
+
+                    if (grid[y][x] === 1) {
+                        ctx.fillStyle = COLORS.qrDark;
+                    } else if (grid[y][x] === 2) {
+                        ctx.fillStyle = COLORS.visited;
+                    } else {
+                        ctx.fillStyle = COLORS.qrLight;
+                    }
+                    ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+
+                    // Subtle grid lines
+                    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+                    ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
+                }
+            }
+
+            // Draw QR finder patterns (decorative overlays)
+            drawFinderPattern(0, 0);
+            drawFinderPattern(MAZE_SIZE - 7, 0);
+            drawFinderPattern(0, MAZE_SIZE - 7);
+
+            // Draw goal
+            ctx.fillStyle = COLORS.goalGlow;
+            ctx.beginPath();
+            ctx.arc(goalX * CELL_SIZE + CELL_SIZE / 2, goalY * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = COLORS.goal;
+            ctx.fillRect(goalX * CELL_SIZE + 2, goalY * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+
+            // Draw player
+            ctx.fillStyle = COLORS.playerGlow;
+            ctx.beginPath();
+            ctx.arc(playerX * CELL_SIZE + CELL_SIZE / 2, playerY * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = COLORS.player;
+            ctx.beginPath();
+            ctx.arc(playerX * CELL_SIZE + CELL_SIZE / 2, playerY * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawFinderPattern(ox, oy) {
+            // Draw 7x7 QR finder pattern overlay (decorative only)
+            const s = CELL_SIZE;
+            ctx.globalAlpha = 0.15;
+            for (let dy = 0; dy < 7; dy++) {
+                for (let dx = 0; dx < 7; dx++) {
+                    const isEdge = dx === 0 || dx === 6 || dy === 0 || dy === 6;
+                    const isInner = dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4;
+                    if (isEdge || isInner) {
+                        ctx.fillStyle = '#00cec9';
+                        ctx.fillRect((ox + dx) * s, (oy + dy) * s, s, s);
+                    }
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function move(dx, dy) {
+            if (gameWon) return;
+            const nx = playerX + dx;
+            const ny = playerY + dy;
+
+            if (nx >= 0 && nx < MAZE_SIZE && ny >= 0 && ny < MAZE_SIZE && grid[ny][nx] !== 1) {
+                grid[playerY][playerX] = 2; // visited
+                playerX = nx;
+                playerY = ny;
+                moves++;
+                document.getElementById('moveCount').textContent = moves;
+                draw();
+
+                if (playerX === goalX && playerY === goalY) {
+                    gameWon = true;
+                    clearInterval(timerInterval);
+                    showWin();
+                }
+            }
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const min = Math.floor(elapsed / 60);
+            const sec = elapsed % 60;
+            document.getElementById('timer').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        function showWin() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const min = Math.floor(elapsed / 60);
+            const sec = elapsed % 60;
+            document.getElementById('winStats').textContent =
+                `${moves} moves | ${min}:${sec.toString().padStart(2, '0')}`;
+            document.getElementById('winOverlay').classList.add('show');
+        }
+
+        function closeWin() {
+            document.getElementById('winOverlay').classList.remove('show');
+            generateMaze();
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowUp': case 'w': case 'W': move(0, -1); e.preventDefault(); break;
+                case 'ArrowDown': case 's': case 'S': move(0, 1); e.preventDefault(); break;
+                case 'ArrowLeft': case 'a': case 'A': move(-1, 0); e.preventDefault(); break;
+                case 'ArrowRight': case 'd': case 'D': move(1, 0); e.preventDefault(); break;
+            }
+        });
+
+        // Init
+        generateMaze();
+    </script>
+</body>
+
+</html>

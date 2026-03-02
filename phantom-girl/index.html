@@ -177,6 +177,7 @@
             align-items: center;
             justify-content: center;
             -webkit-user-select: none;
+            user-select: none;
         }
 
         .m-btn:active {
@@ -363,12 +364,14 @@
     </div>
 
     <div class="start-overlay" id="startOverlay">
+        <canvas id="cgCanvas" width="300" height="220" style="border-radius: 12px; margin-bottom: 15px;"></canvas>
         <h2>ファントムガール</h2>
         <div class="intro-text" id="introText"></div>
         <button onclick="startGame()">はじめる</button>
     </div>
 
     <div class="overlay" id="endOverlay">
+        <canvas id="cgCanvasEnd" width="300" height="220" style="border-radius: 12px; margin-bottom: 15px;"></canvas>
         <h2 id="endTitle"></h2>
         <div class="end-msg" id="endMsg"></div>
         <button onclick="restartGame()">もう一度</button>
@@ -392,7 +395,7 @@
         let player = {
             x: 80, y: GROUND_Y, vy: 0,
             w: 16, h: 28,
-            hp: 100, maxHp: 100,
+            hp: 200, maxHp: 200,
             grounded: true,
             frame: 0, frameTimer: 0,
             facing: 1,
@@ -663,44 +666,158 @@
             ctx.translate(px + 8, py);
             if (facing < 0) ctx.scale(-1, 1);
 
-            // Hair (dark purple)
+            const time = Date.now() * 0.003;
+            const walkCycle = Math.sin(frame * 0.3);
+            const breathe = Math.sin(time * 0.5) * 0.3;
+
+            // === HAIR (flowing, layered dark purple) ===
+            // Back hair layer (longer, behind body)
+            ctx.fillStyle = '#1a0e30';
+            ctx.fillRect(-7 * s, -14 * s, 14 * s, 20 * s);
+            // Hair wave at back
+            const hairWave = Math.sin(time + frame * 0.1) * s;
+            ctx.fillRect(-7 * s, 4 * s, 3 * s, 4 * s + hairWave);
+            ctx.fillRect(4 * s, 4 * s, 3 * s, 3 * s - hairWave);
+
+            // Main hair
             ctx.fillStyle = '#2d1b4e';
-            ctx.fillRect(-6 * s, -14 * s, 12 * s, 5 * s);
-            ctx.fillRect(-7 * s, -12 * s, 2 * s, 8 * s);
-            ctx.fillRect(5 * s, -12 * s, 2 * s, 8 * s);
+            ctx.fillRect(-6 * s, -15 * s, 12 * s, 6 * s);
+            // Side hair strands
+            ctx.fillRect(-7 * s, -13 * s, 2 * s, 12 * s);
+            ctx.fillRect(5 * s, -13 * s, 2 * s, 11 * s);
+            // Hair highlight
+            ctx.fillStyle = '#4a2d7a';
+            ctx.fillRect(-4 * s, -15 * s, 3 * s, 2 * s);
+            ctx.fillRect(0 * s, -14 * s, 2 * s, 1 * s);
+            // Bangs
+            ctx.fillStyle = '#2d1b4e';
+            ctx.fillRect(-5 * s, -12 * s, 10 * s, 2 * s);
+            ctx.fillRect(-4 * s, -10 * s, 2 * s, 1 * s);
+            ctx.fillRect(2 * s, -10 * s, 2 * s, 1 * s);
 
-            // Head (skin)
-            ctx.fillStyle = '#f5cba7';
+            // === RIBBON (small cute pink) ===
+            ctx.fillStyle = '#fd79a8';
+            ctx.fillRect(-6 * s, -14 * s, 3 * s, 2 * s);
+            ctx.fillRect(-7 * s, -13 * s, 1 * s, 1 * s);
+            ctx.fillRect(-3 * s, -13 * s, 1 * s, 1 * s);
+            // Ribbon highlight
+            ctx.fillStyle = '#fab1cc';
+            ctx.fillRect(-5 * s, -14 * s, 1 * s, 1 * s);
+
+            // === HEAD (skin) ===
+            ctx.fillStyle = '#fad7b0';
             ctx.fillRect(-4 * s, -11 * s, 8 * s, 7 * s);
+            // Cheeks (rosy)
+            ctx.fillStyle = 'rgba(255, 150, 150, 0.3)';
+            ctx.fillRect(-4 * s, -7 * s, 2 * s, 2 * s);
+            ctx.fillRect(2 * s, -7 * s, 2 * s, 2 * s);
 
-            // Eyes
-            ctx.fillStyle = '#4a0e4e';
-            ctx.fillRect(-3 * s, -9 * s, 2 * s, 2 * s);
-            ctx.fillRect(1 * s, -9 * s, 2 * s, 2 * s);
+            // === EYES (large, expressive, sad) ===
+            // Eye whites
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-3 * s, -9 * s, 3 * s, 2 * s);
+            ctx.fillRect(1 * s, -9 * s, 3 * s, 2 * s);
+            // Iris (deep purple)
+            ctx.fillStyle = '#6c3483';
+            ctx.fillRect(-2 * s, -9 * s, 2 * s, 2 * s);
+            ctx.fillRect(2 * s, -9 * s, 2 * s, 2 * s);
+            // Pupil
+            ctx.fillStyle = '#1a0530';
+            ctx.fillRect(-2 * s, -8 * s, 1 * s, 1 * s);
+            ctx.fillRect(2 * s, -8 * s, 1 * s, 1 * s);
+            // Eye highlight (sparkle)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillRect(-1 * s, -9 * s, 1 * s, 1 * s);
+            ctx.fillRect(3 * s, -9 * s, 1 * s, 1 * s);
+            // Upper eyelashes
+            ctx.fillStyle = '#1a0e30';
+            ctx.fillRect(-3 * s, -10 * s, 3 * s, 1 * s);
+            ctx.fillRect(1 * s, -10 * s, 3 * s, 1 * s);
+            // Lower eyelashes
+            ctx.fillRect(-3 * s, -7 * s, 1 * s, 1 * s);
+            ctx.fillRect(3 * s, -7 * s, 1 * s, 1 * s);
+            // Eyebrows (worried/sad)
+            ctx.fillStyle = '#2d1b4e';
+            ctx.fillRect(-3 * s, -11 * s, 2 * s, 1 * s);
+            ctx.fillRect(2 * s, -11 * s, 2 * s, 1 * s);
 
-            // Mouth
-            ctx.fillStyle = '#c0392b';
-            ctx.fillRect(-1 * s, -6 * s, 2 * s, 1 * s);
+            // === TEARS (occasional) ===
+            if (player.hp < player.maxHp * 0.7 || player.invincible > 0) {
+                ctx.fillStyle = 'rgba(100, 180, 255, 0.7)';
+                const tearY = (time * 3) % (6 * s);
+                ctx.fillRect(4 * s, -7 * s + tearY, 1 * s, 2 * s);
+                if (player.hp < player.maxHp * 0.4) {
+                    ctx.fillRect(-4 * s, -7 * s + (tearY + s) % (6 * s), 1 * s, 2 * s);
+                }
+            }
 
-            // Body (white dress)
-            ctx.fillStyle = '#dfe6e9';
-            ctx.fillRect(-4 * s, -4 * s, 8 * s, 8 * s);
-            ctx.fillRect(-5 * s, -2 * s, 10 * s, 6 * s);
+            // === MOUTH (sad) ===
+            if (player.hp > player.maxHp * 0.5) {
+                // Slight frown
+                ctx.fillStyle = '#c0392b';
+                ctx.fillRect(-1 * s, -5 * s, 2 * s, 1 * s);
+            } else {
+                // Open cry mouth
+                ctx.fillStyle = '#a03020';
+                ctx.fillRect(-1 * s, -6 * s, 3 * s, 2 * s);
+                ctx.fillStyle = '#1a0530';
+                ctx.fillRect(0 * s, -5 * s, 1 * s, 1 * s);
+            }
 
-            // Dress details
-            ctx.fillStyle = '#b2bec3';
-            ctx.fillRect(-5 * s, 2 * s, 10 * s, 2 * s);
+            // === BODY (white hospital-like dress) ===
+            ctx.fillStyle = '#e8e8f0';
+            ctx.fillRect(-4 * s, -4 * s, 8 * s, 4 * s);
+            // Dress widens
+            ctx.fillRect(-5 * s, 0 * s, 10 * s, 5 * s);
+            // Collar detail
+            ctx.fillStyle = '#b8c0d0';
+            ctx.fillRect(-2 * s, -4 * s, 4 * s, 1 * s);
+            // Button
+            ctx.fillStyle = '#a0a8b8';
+            ctx.fillRect(0 * s, -2 * s, 1 * s, 1 * s);
+            ctx.fillRect(0 * s, 0 * s, 1 * s, 1 * s);
 
-            // Legs
-            ctx.fillStyle = '#f5cba7';
-            const walkOff = Math.sin(frame * 0.3) * 2 * s;
-            ctx.fillRect(-3 * s, 4 * s + (frame % 2 ? walkOff : 0), 2 * s, 4 * s);
-            ctx.fillRect(1 * s, 4 * s + (frame % 2 ? -walkOff : 0), 2 * s, 4 * s);
+            // Dress fold lines
+            ctx.fillStyle = 'rgba(150,155,170,0.3)';
+            ctx.fillRect(-3 * s, 1 * s, 1 * s, 3 * s);
+            ctx.fillRect(2 * s, 0 * s, 1 * s, 4 * s);
+
+            // Skirt hem frill
+            ctx.fillStyle = '#d0d4e0';
+            ctx.fillRect(-6 * s, 4 * s, 12 * s, 2 * s);
+            ctx.fillStyle = '#c0c4d0';
+            for (let f = -6; f < 6; f += 2) {
+                ctx.fillRect(f * s, 5 * s, 1 * s, 1 * s + Math.sin(f + time) * 0.5 * s);
+            }
+
+            // === ARMS (delicate) ===
+            ctx.fillStyle = '#fad7b0';
+            const armSwing = walkCycle * 1.5 * s;
+            // Left arm
+            ctx.fillRect(-5 * s, -3 * s, 1 * s, 5 * s);
+            ctx.fillRect(-6 * s, 1 * s + armSwing, 1 * s, 2 * s);
+            // Right arm
+            ctx.fillRect(4 * s, -3 * s, 1 * s, 5 * s);
+            ctx.fillRect(5 * s, 1 * s - armSwing, 1 * s, 2 * s);
+            // Hands
+            ctx.fillRect(-6 * s, 2 * s + armSwing, 2 * s, 1 * s);
+            ctx.fillRect(5 * s, 2 * s - armSwing, 2 * s, 1 * s);
+
+            // === LEGS ===
+            ctx.fillStyle = '#fad7b0';
+            const legOff = walkCycle * 2 * s;
+            ctx.fillRect(-3 * s, 6 * s + (frame % 2 ? legOff : 0), 2 * s, 4 * s);
+            ctx.fillRect(1 * s, 6 * s + (frame % 2 ? -legOff : 0), 2 * s, 4 * s);
+
+            // Socks
+            ctx.fillStyle = '#e8e8f0';
+            ctx.fillRect(-3 * s, 8 * s + (frame % 2 ? legOff : 0), 2 * s, 2 * s);
+            ctx.fillRect(1 * s, 8 * s + (frame % 2 ? -legOff : 0), 2 * s, 2 * s);
 
             // Shoes
-            ctx.fillStyle = '#2d3436';
-            ctx.fillRect(-3 * s, 8 * s, 2 * s, 1 * s);
-            ctx.fillRect(1 * s, 8 * s, 2 * s, 1 * s);
+            ctx.fillStyle = '#2d1b4e';
+            ctx.fillRect(-4 * s, 10 * s, 3 * s, 1 * s);
+            ctx.fillRect(1 * s, 10 * s, 3 * s, 1 * s);
 
             ctx.restore();
         }
@@ -1320,7 +1437,7 @@
             player.x = 80;
             player.y = GROUND_Y;
             player.vy = 0;
-            player.hp = 100;
+            player.hp = 200;
             player.invincible = 0;
             player.distance = 0;
             player.frame = 0;
@@ -1342,6 +1459,9 @@
             const msg = document.getElementById('endMsg');
 
             overlay.className = 'overlay show ' + type;
+
+            // Draw appropriate CG
+            drawSadGirlCG('cgCanvasEnd', type === 'win' ? 'win' : 'lose');
 
             if (type === 'win') {
                 title.textContent = eventData.dialogues.goalReached[0] || '...着いた。';
@@ -1377,8 +1497,257 @@
             }
         });
 
+        // ===== CG ILLUSTRATIONS =====
+        function drawSadGirlCG(canvasId, scene) {
+            const cgCanvas = document.getElementById(canvasId);
+            if (!cgCanvas) return;
+            const c = cgCanvas.getContext('2d');
+            const W = cgCanvas.width, H = cgCanvas.height;
+
+            // Dark background with gradient
+            const bgGrad = c.createLinearGradient(0, 0, 0, H);
+            bgGrad.addColorStop(0, '#0a0510');
+            bgGrad.addColorStop(0.5, '#0d0818');
+            bgGrad.addColorStop(1, '#080510');
+            c.fillStyle = bgGrad;
+            c.fillRect(0, 0, W, H);
+
+            // Subtle rain lines
+            c.strokeStyle = 'rgba(100, 120, 180, 0.08)';
+            c.lineWidth = 1;
+            for (let i = 0; i < 30; i++) {
+                const rx = Math.random() * W;
+                const ry = Math.random() * H;
+                c.beginPath();
+                c.moveTo(rx, ry);
+                c.lineTo(rx - 2, ry + 15);
+                c.stroke();
+            }
+
+            // Light from above
+            const lightGrad = c.createRadialGradient(W / 2, 0, 10, W / 2, 60, 120);
+            lightGrad.addColorStop(0, 'rgba(150, 180, 220, 0.08)');
+            lightGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            c.fillStyle = lightGrad;
+            c.fillRect(0, 0, W, H);
+
+            const cx = W / 2;
+
+            if (scene === 'start') {
+                // Girl sitting on floor, hugging knees
+                const baseY = H * 0.55;
+
+                // Back hair (long, flowing)
+                c.fillStyle = '#1a0e30';
+                c.beginPath();
+                c.ellipse(cx, baseY - 35, 28, 50, 0, 0, Math.PI * 2);
+                c.fill();
+                // Hair strands falling
+                c.fillRect(cx - 28, baseY - 20, 8, 45);
+                c.fillRect(cx + 20, baseY - 20, 8, 42);
+
+                // Body - curled up (white dress)
+                c.fillStyle = '#e0e0e8';
+                c.beginPath();
+                c.ellipse(cx, baseY + 5, 22, 18, 0, 0, Math.PI * 2);
+                c.fill();
+                // Knees
+                c.beginPath();
+                c.arc(cx - 8, baseY + 8, 10, 0, Math.PI * 2);
+                c.arc(cx + 8, baseY + 8, 10, 0, Math.PI * 2);
+                c.fill();
+
+                // Head (resting on knees)
+                c.fillStyle = '#f0d0a8';
+                c.beginPath();
+                c.arc(cx, baseY - 22, 16, 0, Math.PI * 2);
+                c.fill();
+
+                // Front hair / bangs
+                c.fillStyle = '#2d1b4e';
+                c.beginPath();
+                c.ellipse(cx, baseY - 30, 18, 12, 0, Math.PI, Math.PI * 2);
+                c.fill();
+                c.fillRect(cx - 18, baseY - 28, 36, 6);
+                // Side hair
+                c.fillRect(cx - 20, baseY - 25, 6, 20);
+                c.fillRect(cx + 14, baseY - 25, 6, 18);
+
+                // Ribbon
+                c.fillStyle = '#fd79a8';
+                c.fillRect(cx - 16, baseY - 35, 8, 5);
+                c.fillStyle = '#fab1cc';
+                c.fillRect(cx - 14, baseY - 34, 3, 3);
+
+                // Arms hugging knees
+                c.fillStyle = '#f0d0a8';
+                c.fillRect(cx - 18, baseY - 5, 36, 6);
+
+                // Eyes closed (sad lines)
+                c.strokeStyle = '#3a1e50';
+                c.lineWidth = 1.5;
+                c.beginPath();
+                c.moveTo(cx - 7, baseY - 20);
+                c.lineTo(cx - 3, baseY - 19);
+                c.moveTo(cx + 3, baseY - 20);
+                c.lineTo(cx + 7, baseY - 19);
+                c.stroke();
+
+                // Tears
+                c.fillStyle = 'rgba(100, 170, 255, 0.6)';
+                c.beginPath();
+                c.ellipse(cx - 6, baseY - 14, 1.5, 4, 0.1, 0, Math.PI * 2);
+                c.fill();
+                c.beginPath();
+                c.ellipse(cx + 8, baseY - 15, 1.5, 3.5, -0.1, 0, Math.PI * 2);
+                c.fill();
+
+                // Drop of tear on ground
+                c.fillStyle = 'rgba(100, 170, 255, 0.3)';
+                c.beginPath();
+                c.ellipse(cx + 12, baseY + 25, 4, 1.5, 0, 0, Math.PI * 2);
+                c.fill();
+
+                // Floor
+                c.fillStyle = 'rgba(30, 20, 40, 0.5)';
+                c.fillRect(0, baseY + 28, W, H - baseY - 28);
+
+                // Subtle text
+                c.fillStyle = 'rgba(200, 180, 220, 0.15)';
+                c.font = '10px "Noto Sans JP", sans-serif';
+                c.textAlign = 'center';
+                c.fillText('...たすけて', cx, H - 15);
+
+            } else if (scene === 'lose') {
+                // Girl collapsed on the ground
+                const baseY = H * 0.65;
+
+                // Floor
+                c.fillStyle = 'rgba(20, 10, 25, 0.6)';
+                c.fillRect(0, baseY + 10, W, H);
+
+                // Hair spread on floor
+                c.fillStyle = '#1a0e30';
+                c.beginPath();
+                c.ellipse(cx + 10, baseY, 40, 12, 0.2, 0, Math.PI * 2);
+                c.fill();
+
+                // Body lying down
+                c.fillStyle = '#e0e0e8';
+                c.beginPath();
+                c.ellipse(cx, baseY + 2, 25, 10, 0.1, 0, Math.PI * 2);
+                c.fill();
+
+                // Head
+                c.fillStyle = '#f0d0a8';
+                c.beginPath();
+                c.arc(cx + 25, baseY - 5, 12, 0, Math.PI * 2);
+                c.fill();
+
+                // Hair over face
+                c.fillStyle = '#2d1b4e';
+                c.beginPath();
+                c.ellipse(cx + 25, baseY - 10, 14, 8, 0, Math.PI, Math.PI * 2);
+                c.fill();
+
+                // Arm stretched out
+                c.fillStyle = '#f0d0a8';
+                c.fillRect(cx - 30, baseY - 2, 25, 5);
+                // Hand
+                c.beginPath();
+                c.arc(cx - 32, baseY, 3, 0, Math.PI * 2);
+                c.fill();
+
+                // Tear pool
+                c.fillStyle = 'rgba(100, 170, 255, 0.2)';
+                c.beginPath();
+                c.ellipse(cx + 30, baseY + 8, 8, 3, 0, 0, Math.PI * 2);
+                c.fill();
+
+                // Dark vignette
+                const vig = c.createRadialGradient(cx, baseY, 30, cx, baseY, 160);
+                vig.addColorStop(0, 'rgba(0,0,0,0)');
+                vig.addColorStop(1, 'rgba(0,0,0,0.6)');
+                c.fillStyle = vig;
+                c.fillRect(0, 0, W, H);
+
+            } else if (scene === 'win') {
+                // Girl standing in doorway with light
+                const baseY = H * 0.55;
+
+                // Door of light
+                const doorGrad = c.createLinearGradient(cx - 25, 0, cx + 25, 0);
+                doorGrad.addColorStop(0, 'rgba(129, 236, 236, 0.0)');
+                doorGrad.addColorStop(0.3, 'rgba(129, 236, 236, 0.1)');
+                doorGrad.addColorStop(0.5, 'rgba(200, 240, 240, 0.15)');
+                doorGrad.addColorStop(0.7, 'rgba(129, 236, 236, 0.1)');
+                doorGrad.addColorStop(1, 'rgba(129, 236, 236, 0.0)');
+                c.fillStyle = doorGrad;
+                c.fillRect(cx - 40, 0, 80, H);
+
+                // Hair
+                c.fillStyle = '#2d1b4e';
+                c.beginPath();
+                c.ellipse(cx, baseY - 35, 15, 18, 0, 0, Math.PI * 2);
+                c.fill();
+                c.fillRect(cx - 15, baseY - 25, 6, 30);
+                c.fillRect(cx + 9, baseY - 25, 6, 28);
+
+                // Body
+                c.fillStyle = '#e0e0e8';
+                c.fillRect(cx - 10, baseY - 10, 20, 30);
+                c.fillRect(cx - 12, baseY + 15, 24, 8);
+
+                // Head
+                c.fillStyle = '#f0d0a8';
+                c.beginPath();
+                c.arc(cx, baseY - 25, 12, 0, Math.PI * 2);
+                c.fill();
+
+                // Eyes (looking up, hopeful)
+                c.fillStyle = '#6c3483';
+                c.fillRect(cx - 5, baseY - 27, 3, 3);
+                c.fillRect(cx + 2, baseY - 27, 3, 3);
+                // Eye highlights
+                c.fillStyle = '#fff';
+                c.fillRect(cx - 4, baseY - 27, 1, 1);
+                c.fillRect(cx + 3, baseY - 27, 1, 1);
+
+                // Slight smile
+                c.strokeStyle = '#c0392b';
+                c.lineWidth = 1;
+                c.beginPath();
+                c.arc(cx, baseY - 20, 3, 0.1, Math.PI - 0.1);
+                c.stroke();
+
+                // Ribbon
+                c.fillStyle = '#fd79a8';
+                c.fillRect(cx - 12, baseY - 38, 6, 4);
+
+                // Feet
+                c.fillStyle = '#2d1b4e';
+                c.fillRect(cx - 8, baseY + 22, 5, 3);
+                c.fillRect(cx + 3, baseY + 22, 5, 3);
+
+                // Floor
+                c.fillStyle = 'rgba(30, 20, 40, 0.4)';
+                c.fillRect(0, baseY + 25, W, H);
+
+                // Light particles
+                c.fillStyle = 'rgba(129, 236, 236, 0.3)';
+                for (let i = 0; i < 8; i++) {
+                    const px = cx - 30 + Math.random() * 60;
+                    const py = Math.random() * H;
+                    c.beginPath();
+                    c.arc(px, py, 1 + Math.random() * 2, 0, Math.PI * 2);
+                    c.fill();
+                }
+            }
+        }
+
         // ===== INIT =====
         loadEvents().then(() => {
+            drawSadGirlCG('cgCanvas', 'start');
             gameLoop();
         });
     </script>

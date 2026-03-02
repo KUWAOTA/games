@@ -195,6 +195,14 @@
             line-height: 1;
         }
 
+        .cell .placer-label {
+            font-size: 0.5rem;
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            opacity: 0.5;
+        }
+
         .cell.val-o .symbol {
             color: var(--o-color);
         }
@@ -205,6 +213,10 @@
 
         .cell.chained {
             animation: chainPulse 0.6s ease-out;
+        }
+
+        .cell.chained .symbol {
+            color: var(--chain-color) !important;
         }
 
         .cell.win-cell {
@@ -272,6 +284,54 @@
 
         .dep-item.dep-exclusion {
             border-color: rgba(253, 121, 168, 0.3);
+        }
+
+        .rule-box {
+            max-width: 600px;
+            width: 100%;
+            padding: 10px 20px;
+            margin-bottom: 10px;
+        }
+
+        .rule-box h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: var(--accent2);
+            margin-bottom: 8px;
+        }
+
+        .rule-box ul {
+            list-style: none;
+            font-size: 0.78rem;
+            color: var(--text2);
+            line-height: 1.8;
+        }
+
+        .rule-box ul li::before {
+            content: "⚡ ";
+        }
+
+        .chain-log {
+            max-width: 600px;
+            width: 100%;
+            padding: 10px 20px;
+            margin-bottom: 40px;
+        }
+
+        .chain-log h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: var(--chain-color);
+            margin-bottom: 8px;
+        }
+
+        #chainLogEntries {
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text2);
+            line-height: 1.8;
         }
 
         .win-overlay {
@@ -342,29 +402,6 @@
             }
         }
 
-        .chain-log {
-            max-width: 600px;
-            width: 100%;
-            padding: 10px 20px;
-            margin-bottom: 40px;
-        }
-
-        .chain-log h3 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.9rem;
-            color: var(--chain-color);
-            margin-bottom: 8px;
-        }
-
-        .chain-log-entries {
-            max-height: 120px;
-            overflow-y: auto;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--text2);
-            line-height: 1.8;
-        }
-
         @media (max-width: 600px) {
             header h1 {
                 font-size: 1.4rem;
@@ -383,7 +420,7 @@
 </head>
 
 <body>
-    <a href="../" class="back-link">← BACK</a>
+    <a href="../index.html" class="back-link">← BACK</a>
 
     <header>
         <h1>命題論理マルバツ</h1>
@@ -392,19 +429,17 @@
 
     <div class="controls">
         <label>ボードサイズ:
-            <select id="boardSize">
+            <select id="boardSize" onchange="updateWinLen()">
                 <option value="3">3×3</option>
                 <option value="4" selected>4×4 (推奨)</option>
                 <option value="5">5×5</option>
                 <option value="6">6×6</option>
             </select>
         </label>
-        <label>勝利条件:
-            <select id="winLength">
-                <option value="3">3連続</option>
-                <option value="4">4連続</option>
-            </select>
-        </label>
+        <div id="winLenDisplay"
+            style="color: var(--accent2); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">
+            勝利条件: <span id="winLenText">4</span>連続 (= マス目数)
+        </div>
         <button id="newGameBtn" onclick="newGame()">NEW GAME</button>
     </div>
 
@@ -416,6 +451,16 @@
         <div class="board" id="board"></div>
     </div>
 
+    <div class="rule-box">
+        <h3>📖 ルール</h3>
+        <ul>
+            <li><strong>含意 (→)</strong>: P_a が真(○)なら P_b も真(○)に確定。P_b が偽(×)なら P_a も偽(×)に確定。</li>
+            <li><strong>同値 (↔)</strong>: P_a と P_b は必ず同じ値になる。</li>
+            <li><strong>排反 (⊥)</strong>: P_a と P_b は必ず反対の値になる。</li>
+            <li>連鎖は即時に自動で伝播します。連鎖で揃えば勝ち！</li>
+        </ul>
+    </div>
+
     <div class="deps-panel">
         <h3>⚡ DEPENDENCIES</h3>
         <div class="dep-list" id="depList"></div>
@@ -423,7 +468,7 @@
 
     <div class="chain-log">
         <h3>🔗 CHAIN LOG</h3>
-        <div class="chain-log-entries" id="chainLog"></div>
+        <div id="chainLogEntries"></div>
     </div>
 
     <div class="win-overlay" id="winOverlay">
@@ -434,40 +479,45 @@
 
     <script>
         const DEP_TYPES = {
-            IMPLICATION: { symbol: '→', label: '含意', cls: 'dep-implication' },
-            EQUIVALENCE: { symbol: '↔', label: '同値', cls: 'dep-equivalence' },
-            EXCLUSION: { symbol: '⊥', label: '排反', cls: 'dep-exclusion' }
+            IMPLICATION: { symbol: '→', label: '含意', cls: 'dep-implication', desc: 'A真→B真 / B偽→A偽' },
+            EQUIVALENCE: { symbol: '↔', label: '同値', cls: 'dep-equivalence', desc: '同じ値' },
+            EXCLUSION: { symbol: '⊥', label: '排反', cls: 'dep-exclusion', desc: '反対の値' }
         };
 
         let size = 4;
         let winLen = 4;
-        let cells = [];      // null, 'o', 'x'
-        let playerCells = []; // null, 'o', 'x' - who placed it (for win check)
+        let cells = [];       // null, 'o', 'x'
+        let playerCells = []; // who placed or who gets credit
         let turn = 'o';
         let deps = [];
         let gameOver = false;
-        let chainLogEntries = [];
+
+        function updateWinLen() {
+            const s = parseInt(document.getElementById('boardSize').value);
+            document.getElementById('winLenText').textContent = s;
+        }
 
         function newGame() {
             size = parseInt(document.getElementById('boardSize').value);
-            winLen = parseInt(document.getElementById('winLength').value);
-            if (winLen > size) winLen = size;
+            winLen = size; // Win condition = board size
+            document.getElementById('winLenText').textContent = size;
+
             cells = new Array(size * size).fill(null);
             playerCells = new Array(size * size).fill(null);
             turn = 'o';
             gameOver = false;
-            chainLogEntries = [];
             generateDependencies();
             renderBoard();
             renderDeps();
             updateTurn();
-            document.getElementById('chainLog').querySelector('.chain-log-entries').innerHTML = '';
+            document.getElementById('chainLogEntries').innerHTML = '';
         }
 
         function generateDependencies() {
             deps = [];
             const n = size * size;
-            const numDeps = Math.floor(n * 0.8) + Math.floor(Math.random() * Math.floor(n * 0.4));
+            // Generate a reasonable number of dependencies
+            const numDeps = Math.floor(n * 0.6) + Math.floor(Math.random() * Math.floor(n * 0.3));
 
             for (let i = 0; i < numDeps; i++) {
                 const a = Math.floor(Math.random() * n);
@@ -499,7 +549,7 @@
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.id = `cell-${i}`;
-                cell.innerHTML = `<span class="prop-label">P${i}</span><span class="symbol"></span>`;
+                cell.innerHTML = `<span class="prop-label">P${i}</span><span class="symbol"></span><span class="placer-label"></span>`;
                 cell.onclick = () => placeMove(i);
                 board.appendChild(cell);
             }
@@ -513,7 +563,7 @@
                 const el = document.createElement('span');
                 el.className = `dep-item ${info.cls}`;
                 el.textContent = `P${d.a} ${info.symbol} P${d.b}`;
-                el.title = info.label;
+                el.title = `${info.label}: ${info.desc}`;
                 list.appendChild(el);
             });
         }
@@ -526,10 +576,10 @@
                 return;
             }
             if (turn === 'o') {
-                ind.textContent = '○ の番';
+                ind.textContent = '○ の番 (真 = TRUE)';
                 ind.className = 'turn-indicator turn-o';
             } else {
-                ind.textContent = '× の番';
+                ind.textContent = '× の番 (偽 = FALSE)';
                 ind.className = 'turn-indicator turn-x';
             }
         }
@@ -537,13 +587,18 @@
         function placeMove(idx) {
             if (gameOver || cells[idx] !== null) return;
 
+            // Place current player's mark
             cells[idx] = turn;
             playerCells[idx] = turn;
             updateCell(idx, false);
-            addChainLog(`Player ${turn === 'o' ? '○' : '×'} → P${idx} = ${turn === 'o' ? 'TRUE' : 'FALSE'}`);
+            addChainLog(`🎯 ${turn === 'o' ? '○' : '×'} が P${idx} を選択 → ${turn === 'o' ? 'TRUE(○)' : 'FALSE(×)'}`);
 
-            // Propagate chain
-            propagateChain(idx, turn);
+            // Propagate chain reactions from logical dependencies
+            const chainCount = propagateChain();
+
+            if (chainCount > 0) {
+                addChainLog(`  → ${chainCount}個のマスが連鎖で確定！`);
+            }
 
             // Check win
             const winner = checkWin();
@@ -562,14 +617,16 @@
                 return;
             }
 
+            // Switch turns
             turn = turn === 'o' ? 'x' : 'o';
             updateTurn();
         }
 
-        function propagateChain(idx, val) {
+        function propagateChain() {
+            let totalChanged = 0;
             let changed = true;
             let iterations = 0;
-            const maxIter = size * size * 2;
+            const maxIter = size * size * 3;
 
             while (changed && iterations < maxIter) {
                 changed = false;
@@ -577,20 +634,23 @@
 
                 for (const dep of deps) {
                     if (dep.type === 'IMPLICATION') {
-                        // a → b: if a is true, b must be true; if b is false, a must be false
+                        // a → b: if a is TRUE(○), b must be TRUE(○)
                         if (cells[dep.a] === 'o' && cells[dep.b] === null) {
                             cells[dep.b] = 'o';
-                            playerCells[dep.b] = playerCells[dep.a]; // same player credit
+                            playerCells[dep.b] = playerCells[dep.a];
                             updateCell(dep.b, true);
-                            addChainLog(`  ⚡ P${dep.a}→P${dep.b}: P${dep.b} = TRUE (含意)`);
+                            addChainLog(`  ⚡ P${dep.a}→P${dep.b}: P${dep.a}が○(真)なので P${dep.b}も○(真)に！ (含意)`);
                             changed = true;
+                            totalChanged++;
                         }
+                        // Contrapositive: if b is FALSE(×), a must be FALSE(×)
                         if (cells[dep.b] === 'x' && cells[dep.a] === null) {
                             cells[dep.a] = 'x';
                             playerCells[dep.a] = playerCells[dep.b];
                             updateCell(dep.a, true);
-                            addChainLog(`  ⚡ P${dep.a}→P${dep.b}: P${dep.a} = FALSE (対偶)`);
+                            addChainLog(`  ⚡ P${dep.a}→P${dep.b}: P${dep.b}が×(偽)なので P${dep.a}も×(偽)に！ (対偶)`);
                             changed = true;
+                            totalChanged++;
                         }
                     } else if (dep.type === 'EQUIVALENCE') {
                         // a ↔ b: same value
@@ -598,15 +658,17 @@
                             cells[dep.b] = cells[dep.a];
                             playerCells[dep.b] = playerCells[dep.a];
                             updateCell(dep.b, true);
-                            addChainLog(`  ⚡ P${dep.a}↔P${dep.b}: P${dep.b} = ${cells[dep.a] === 'o' ? 'TRUE' : 'FALSE'} (同値)`);
+                            addChainLog(`  ⚡ P${dep.a}↔P${dep.b}: P${dep.b}も${cells[dep.a] === 'o' ? '○(真)' : '×(偽)'}に！ (同値)`);
                             changed = true;
+                            totalChanged++;
                         }
                         if (cells[dep.b] !== null && cells[dep.a] === null) {
                             cells[dep.a] = cells[dep.b];
                             playerCells[dep.a] = playerCells[dep.b];
                             updateCell(dep.a, true);
-                            addChainLog(`  ⚡ P${dep.a}↔P${dep.b}: P${dep.a} = ${cells[dep.b] === 'o' ? 'TRUE' : 'FALSE'} (同値)`);
+                            addChainLog(`  ⚡ P${dep.a}↔P${dep.b}: P${dep.a}も${cells[dep.b] === 'o' ? '○(真)' : '×(偽)'}に！ (同値)`);
                             changed = true;
+                            totalChanged++;
                         }
                     } else if (dep.type === 'EXCLUSION') {
                         // a ⊥ b: opposite values
@@ -614,24 +676,28 @@
                             cells[dep.b] = cells[dep.a] === 'o' ? 'x' : 'o';
                             playerCells[dep.b] = playerCells[dep.a];
                             updateCell(dep.b, true);
-                            addChainLog(`  ⚡ P${dep.a}⊥P${dep.b}: P${dep.b} = ${cells[dep.b] === 'o' ? 'TRUE' : 'FALSE'} (排反)`);
+                            addChainLog(`  ⚡ P${dep.a}⊥P${dep.b}: P${dep.b}は${cells[dep.b] === 'o' ? '○(真)' : '×(偽)'}に！ (排反)`);
                             changed = true;
+                            totalChanged++;
                         }
                         if (cells[dep.b] !== null && cells[dep.a] === null) {
                             cells[dep.a] = cells[dep.b] === 'o' ? 'x' : 'o';
                             playerCells[dep.a] = playerCells[dep.b];
                             updateCell(dep.a, true);
-                            addChainLog(`  ⚡ P${dep.a}⊥P${dep.b}: P${dep.a} = ${cells[dep.a] === 'o' ? 'TRUE' : 'FALSE'} (排反)`);
+                            addChainLog(`  ⚡ P${dep.a}⊥P${dep.b}: P${dep.a}は${cells[dep.a] === 'o' ? '○(真)' : '×(偽)'}に！ (排反)`);
                             changed = true;
+                            totalChanged++;
                         }
                     }
                 }
             }
+            return totalChanged;
         }
 
         function updateCell(idx, isChain) {
             const el = document.getElementById(`cell-${idx}`);
             const sym = el.querySelector('.symbol');
+            const placer = el.querySelector('.placer-label');
             if (cells[idx] === 'o') {
                 sym.textContent = '○';
                 el.classList.add('filled', 'val-o');
@@ -641,14 +707,19 @@
                 el.classList.add('filled', 'val-x');
                 el.classList.remove('val-o');
             }
+            // Show who gets credit
+            if (playerCells[idx]) {
+                placer.textContent = playerCells[idx] === 'o' ? '○' : '×';
+                placer.style.color = playerCells[idx] === 'o' ? 'var(--o-color)' : 'var(--x-color)';
+            }
             if (isChain) {
                 el.classList.add('chained');
-                setTimeout(() => el.classList.remove('chained'), 600);
+                setTimeout(() => el.classList.remove('chained'), 800);
             }
         }
 
         function checkWin() {
-            // Check rows, cols, diagonals for winLen consecutive same playerCells
+            // Check rows, cols, diagonals for winLen consecutive same-value cells
             for (let player of ['o', 'x']) {
                 // Rows
                 for (let r = 0; r < size; r++) {
@@ -725,11 +796,11 @@
             } else if (winner === 'o') {
                 msg.className = 'win-o';
                 msg.textContent = '○ WIN!';
-                detail.textContent = `○ プレイヤーが${winLen}連続を達成！`;
+                detail.textContent = `○ が ${winLen}連続を達成！（連鎖含む）`;
             } else {
                 msg.className = 'win-x';
                 msg.textContent = '× WIN!';
-                detail.textContent = `× プレイヤーが${winLen}連続を達成！`;
+                detail.textContent = `× が ${winLen}連続を達成！（連鎖含む）`;
             }
         }
 
@@ -739,7 +810,7 @@
         }
 
         function addChainLog(text) {
-            const log = document.getElementById('chainLog').querySelector('.chain-log-entries');
+            const log = document.getElementById('chainLogEntries');
             log.innerHTML += text + '<br>';
             log.scrollTop = log.scrollHeight;
         }

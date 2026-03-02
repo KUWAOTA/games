@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QRコード迷路 | QR Maze</title>
-    <meta name="description" content="QRコードが迷路に変身。セルの間を縫ってゴールを目指せ！">
+    <meta name="description" content="入力した文字列からQRコードを生成し、それが迷路になる！">
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;700&display=swap"
         rel="stylesheet">
@@ -56,7 +56,7 @@
 
         header {
             text-align: center;
-            padding: 40px 20px 20px;
+            padding: 40px 20px 10px;
         }
 
         header h1 {
@@ -74,13 +74,45 @@
             font-size: 0.9rem;
         }
 
-        .controls {
+        .input-section {
             display: flex;
-            gap: 15px;
-            padding: 20px;
+            gap: 10px;
+            padding: 15px 20px;
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .input-section input {
+            flex: 1;
+            min-width: 200px;
+            background: var(--bg2);
+            color: var(--text);
+            border: 1px solid rgba(0, 206, 201, 0.3);
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .input-section input:focus {
+            border-color: var(--accent);
+        }
+
+        .input-section input::placeholder {
+            color: var(--text2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            padding: 5px 20px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .controls button {
@@ -118,9 +150,16 @@
             font-size: 0.75rem;
         }
 
+        .current-text {
+            color: var(--text2);
+            font-size: 0.8rem;
+            padding: 5px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
         .maze-wrapper {
             position: relative;
-            padding: 20px;
+            padding: 10px;
         }
 
         #mazeCanvas {
@@ -169,7 +208,7 @@
         }
 
         .instructions {
-            padding: 20px;
+            padding: 15px;
             color: var(--text2);
             font-size: 0.85rem;
             text-align: center;
@@ -205,6 +244,15 @@
             color: var(--text2);
             margin-top: 10px;
             font-size: 1.1rem;
+        }
+
+        .win-overlay .qr-result {
+            color: var(--accent2);
+            margin-top: 15px;
+            font-size: 1rem;
+            max-width: 300px;
+            text-align: center;
+            word-break: break-all;
         }
 
         .win-overlay button {
@@ -251,15 +299,23 @@
 </head>
 
 <body>
-    <a href="../" class="back-link">← BACK</a>
+    <a href="../index.html" class="back-link">← BACK</a>
 
     <header>
         <h1>QRコード迷路</h1>
-        <p>Navigate through the QR Code</p>
+        <p>入力した文字列のQRコードが迷路に！</p>
     </header>
 
+    <div class="input-section">
+        <input type="text" id="qrInput" placeholder="迷路にしたい文字列を入力..." value="Hello World!" maxlength="50">
+    </div>
+
     <div class="controls">
-        <button onclick="generateMaze()">NEW MAZE</button>
+        <button onclick="generateFromInput()">この文字列でQR迷路を生成</button>
+    </div>
+
+    <div class="current-text">
+        QR内容: <span id="currentText">Hello World!</span>
     </div>
 
     <div class="stats">
@@ -286,21 +342,26 @@
     </div>
 
     <div class="instructions">
-        <p>矢印キーまたはWASDで移動 | 🟪 = プレイヤー | 🟥 = ゴール</p>
+        <p>矢印キー or WASD で移動 | 🟪 = プレイヤー | 🟥 = ゴール</p>
     </div>
 
     <div class="win-overlay" id="winOverlay">
         <h2>CLEAR!</h2>
         <p id="winStats"></p>
+        <div class="qr-result" id="qrResult"></div>
         <button onclick="closeWin()">次の迷路へ</button>
     </div>
+
+    <!-- QR Code generation library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 
     <script>
         const canvas = document.getElementById('mazeCanvas');
         const ctx = canvas.getContext('2d');
 
-        const MAZE_SIZE = 21; // Must be odd for maze gen
-        const CELL_SIZE = Math.floor(420 / MAZE_SIZE);
+        let qrModules = []; // The QR code module data
+        let mazeSize = 21;
+        let cellSize = 20;
 
         let grid = [];
         let playerX = 1, playerY = 1;
@@ -309,22 +370,31 @@
         let startTime = 0;
         let timerInterval = null;
         let gameWon = false;
+        let currentInputText = 'Hello World!';
 
-        // Colors
         const COLORS = {
-            wall: '#1a1a2e',
-            path: '#16213e',
+            wall: '#0f0f1a',
+            path: '#e8e8f0',
             player: '#6c5ce7',
             playerGlow: 'rgba(108, 92, 231, 0.4)',
             goal: '#fd79a8',
             goalGlow: 'rgba(253, 121, 168, 0.4)',
-            qrDark: '#0f0f1a',
-            qrLight: '#e8e8f0',
-            visited: 'rgba(0, 206, 201, 0.08)',
-            border: '#2d3436'
+            visited: 'rgba(0, 206, 201, 0.12)',
+            qrAccent: 'rgba(0, 206, 201, 0.08)'
         };
 
-        function generateMaze() {
+        function generateFromInput() {
+            const input = document.getElementById('qrInput').value.trim();
+            if (!input) {
+                alert('文字列を入力してください');
+                return;
+            }
+            currentInputText = input;
+            document.getElementById('currentText').textContent = input;
+            generateQRMaze(input);
+        }
+
+        function generateQRMaze(text) {
             gameWon = false;
             moves = 0;
             document.getElementById('moveCount').textContent = '0';
@@ -332,139 +402,219 @@
             startTime = Date.now();
             timerInterval = setInterval(updateTimer, 1000);
 
-            // Init grid: all walls
-            grid = [];
-            for (let y = 0; y < MAZE_SIZE; y++) {
-                grid[y] = [];
-                for (let x = 0; x < MAZE_SIZE; x++) {
-                    grid[y][x] = 1; // wall
+            // Generate QR code
+            const qr = qrcode(0, 'M');
+            qr.addData(text);
+            qr.make();
+
+            const moduleCount = qr.getModuleCount();
+            mazeSize = moduleCount;
+
+            // Make the maze size odd (needed for maze generation overlay)
+            // We'll use the QR as a visual base and carve paths through it
+            qrModules = [];
+            for (let y = 0; y < moduleCount; y++) {
+                qrModules[y] = [];
+                for (let x = 0; x < moduleCount; x++) {
+                    qrModules[y][x] = qr.isDark(y, x) ? 1 : 0;
                 }
             }
 
-            // Generate maze using recursive backtracking
-            carve(1, 1);
+            // Create maze grid from QR
+            // Strategy: QR dark = wall, QR light = path, then ensure connectivity
+            grid = [];
+            for (let y = 0; y < mazeSize; y++) {
+                grid[y] = [];
+                for (let x = 0; x < mazeSize; x++) {
+                    grid[y][x] = qrModules[y][x]; // 1 = wall (dark), 0 = path (light)
+                }
+            }
 
-            // Add QR-like finder patterns (decorative corners)
-            addFinderPatterns();
+            // Ensure start and goal are open
+            grid[1][1] = 0;
+            grid[1][2] = 0;
+            grid[2][1] = 0;
 
-            // Set player & goal
+            // Ensure connectivity by carving a path from start to a far corner
+            ensureConnectivity();
+
+            // Set player
             playerX = 1;
             playerY = 1;
-            grid[1][1] = 0;
 
-            // Find goal: furthest reachable point
-            let maxDist = 0;
-            goalX = MAZE_SIZE - 2;
-            goalY = MAZE_SIZE - 2;
+            // Find goal: furthest reachable open cell
+            findGoal();
 
-            for (let y = 1; y < MAZE_SIZE - 1; y++) {
-                for (let x = 1; x < MAZE_SIZE - 1; x++) {
-                    if (grid[y][x] === 0) {
-                        const dist = Math.abs(x - 1) + Math.abs(y - 1);
-                        if (dist > maxDist) {
-                            maxDist = dist;
-                            goalX = x;
-                            goalY = y;
-                        }
-                    }
-                }
-            }
+            // Calculate cell size
+            cellSize = Math.floor(Math.min(420, window.innerWidth - 40) / mazeSize);
+            canvas.width = mazeSize * cellSize;
+            canvas.height = mazeSize * cellSize;
 
             draw();
         }
 
-        function carve(x, y) {
-            grid[y][x] = 0;
-            const dirs = shuffleArray([[0, -2], [0, 2], [-2, 0], [2, 0]]);
+        function ensureConnectivity() {
+            // BFS from start to find all reachable cells
+            const reachable = new Set();
+            const queue = [[1, 1]];
+            reachable.add('1,1');
 
-            for (const [dx, dy] of dirs) {
-                const nx = x + dx, ny = y + dy;
-                if (nx > 0 && nx < MAZE_SIZE - 1 && ny > 0 && ny < MAZE_SIZE - 1 && grid[ny][nx] === 1) {
-                    grid[y + dy / 2][x + dx / 2] = 0;
-                    carve(nx, ny);
+            while (queue.length > 0) {
+                const [cx, cy] = queue.shift();
+                for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+                    const nx = cx + dx, ny = cy + dy;
+                    const key = `${nx},${ny}`;
+                    if (nx >= 0 && nx < mazeSize && ny >= 0 && ny < mazeSize &&
+                        grid[ny][nx] === 0 && !reachable.has(key)) {
+                        reachable.add(key);
+                        queue.push([nx, ny]);
+                    }
                 }
             }
-        }
 
-        function addFinderPatterns() {
-            // Add QR-style finder pattern borders (decorative, don't block paths)
-            const patterns = [
-                { ox: 0, oy: 0 },
-                { ox: MAZE_SIZE - 7, oy: 0 },
-                { ox: 0, oy: MAZE_SIZE - 7 }
-            ];
-            // We just mark these visually, don't change walkability
-        }
+            // If not enough reachable cells, carve more paths
+            if (reachable.size < mazeSize * 2) {
+                // Carve a winding path through the QR code
+                let cx = 1, cy = 1;
+                const target_x = mazeSize - 2;
+                const target_y = mazeSize - 2;
 
-        function shuffleArray(arr) {
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
+                while (cx < target_x || cy < target_y) {
+                    grid[cy][cx] = 0;
+                    if (Math.random() < 0.6 && cx < target_x) {
+                        cx++;
+                    } else if (cy < target_y) {
+                        cy++;
+                    } else {
+                        cx++;
+                    }
+                    // Also carve some side paths
+                    if (Math.random() < 0.3) {
+                        const sd = Math.random() < 0.5 ? 1 : -1;
+                        const sy = cy + sd;
+                        if (sy > 0 && sy < mazeSize - 1) grid[sy][cx] = 0;
+                    }
+                }
+                grid[target_y][target_x] = 0;
             }
-            return arr;
+
+            // Additional connectivity: randomly open some walls to create more paths
+            for (let i = 0; i < mazeSize * 2; i++) {
+                const rx = 1 + Math.floor(Math.random() * (mazeSize - 2));
+                const ry = 1 + Math.floor(Math.random() * (mazeSize - 2));
+                // Open wall if it connects two path cells
+                if (grid[ry][rx] === 1) {
+                    let adjacentPaths = 0;
+                    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+                        const nx = rx + dx, ny = ry + dy;
+                        if (nx >= 0 && nx < mazeSize && ny >= 0 && ny < mazeSize && grid[ny][nx] === 0) {
+                            adjacentPaths++;
+                        }
+                    }
+                    if (adjacentPaths >= 2) {
+                        grid[ry][rx] = 0;
+                    }
+                }
+            }
+
+            // Ensure the border is walls (preserve QR look)
+            for (let i = 0; i < mazeSize; i++) {
+                grid[0][i] = 1;
+                grid[mazeSize - 1][i] = 1;
+                grid[i][0] = 1;
+                grid[i][mazeSize - 1] = 1;
+            }
+            grid[1][1] = 0; // ensure start is open
+        }
+
+        function findGoal() {
+            // BFS to find furthest reachable cell
+            const dist = {};
+            const queue = [[1, 1, 0]];
+            dist['1,1'] = 0;
+            let maxDist = 0;
+            goalX = mazeSize - 2;
+            goalY = mazeSize - 2;
+
+            while (queue.length > 0) {
+                const [cx, cy, d] = queue.shift();
+                for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+                    const nx = cx + dx, ny = cy + dy;
+                    const key = `${nx},${ny}`;
+                    if (nx >= 0 && nx < mazeSize && ny >= 0 && ny < mazeSize &&
+                        grid[ny][nx] === 0 && !(key in dist)) {
+                        dist[key] = d + 1;
+                        queue.push([nx, ny, d + 1]);
+                        if (d + 1 > maxDist) {
+                            maxDist = d + 1;
+                            goalX = nx;
+                            goalY = ny;
+                        }
+                    }
+                }
+            }
         }
 
         function draw() {
-            // Resize canvas
-            canvas.width = MAZE_SIZE * CELL_SIZE;
-            canvas.height = MAZE_SIZE * CELL_SIZE;
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw QR-style background
-            for (let y = 0; y < MAZE_SIZE; y++) {
-                for (let x = 0; x < MAZE_SIZE; x++) {
-                    const px = x * CELL_SIZE;
-                    const py = y * CELL_SIZE;
+            for (let y = 0; y < mazeSize; y++) {
+                for (let x = 0; x < mazeSize; x++) {
+                    const px = x * cellSize;
+                    const py = y * cellSize;
 
                     if (grid[y][x] === 1) {
-                        ctx.fillStyle = COLORS.qrDark;
+                        // Wall - dark QR module
+                        ctx.fillStyle = qrModules[y] && qrModules[y][x] ? '#0f0f1a' : '#181825';
                     } else if (grid[y][x] === 2) {
                         ctx.fillStyle = COLORS.visited;
                     } else {
-                        ctx.fillStyle = COLORS.qrLight;
+                        // Path - light QR module
+                        ctx.fillStyle = qrModules[y] && qrModules[y][x] === 0 ? '#e8e8f0' : '#c8c8d8';
                     }
-                    ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                    ctx.fillRect(px, py, cellSize, cellSize);
 
-                    // Subtle grid lines
-                    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-                    ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
+                    // Subtle grid
+                    ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+                    ctx.strokeRect(px, py, cellSize, cellSize);
                 }
             }
 
-            // Draw QR finder patterns (decorative overlays)
-            drawFinderPattern(0, 0);
-            drawFinderPattern(MAZE_SIZE - 7, 0);
-            drawFinderPattern(0, MAZE_SIZE - 7);
+            // QR finder patterns highlight
+            drawFinderOverlay(0, 0);
+            drawFinderOverlay(mazeSize - 7, 0);
+            drawFinderOverlay(0, mazeSize - 7);
 
-            // Draw goal
+            // Goal glow
             ctx.fillStyle = COLORS.goalGlow;
             ctx.beginPath();
-            ctx.arc(goalX * CELL_SIZE + CELL_SIZE / 2, goalY * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE, 0, Math.PI * 2);
+            ctx.arc(goalX * cellSize + cellSize / 2, goalY * cellSize + cellSize / 2, cellSize * 1.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = COLORS.goal;
-            ctx.fillRect(goalX * CELL_SIZE + 2, goalY * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            ctx.fillRect(goalX * cellSize + 2, goalY * cellSize + 2, cellSize - 4, cellSize - 4);
 
-            // Draw player
+            // Player
             ctx.fillStyle = COLORS.playerGlow;
             ctx.beginPath();
-            ctx.arc(playerX * CELL_SIZE + CELL_SIZE / 2, playerY * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE, 0, Math.PI * 2);
+            ctx.arc(playerX * cellSize + cellSize / 2, playerY * cellSize + cellSize / 2, cellSize, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = COLORS.player;
             ctx.beginPath();
-            ctx.arc(playerX * CELL_SIZE + CELL_SIZE / 2, playerY * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 2 - 2, 0, Math.PI * 2);
+            ctx.arc(playerX * cellSize + cellSize / 2, playerY * cellSize + cellSize / 2, cellSize / 2 - 1, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        function drawFinderPattern(ox, oy) {
-            // Draw 7x7 QR finder pattern overlay (decorative only)
-            const s = CELL_SIZE;
-            ctx.globalAlpha = 0.15;
+        function drawFinderOverlay(ox, oy) {
+            if (ox + 7 > mazeSize || oy + 7 > mazeSize) return;
+            ctx.globalAlpha = 0.12;
             for (let dy = 0; dy < 7; dy++) {
                 for (let dx = 0; dx < 7; dx++) {
                     const isEdge = dx === 0 || dx === 6 || dy === 0 || dy === 6;
                     const isInner = dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4;
                     if (isEdge || isInner) {
                         ctx.fillStyle = '#00cec9';
-                        ctx.fillRect((ox + dx) * s, (oy + dy) * s, s, s);
+                        ctx.fillRect((ox + dx) * cellSize, (oy + dy) * cellSize, cellSize, cellSize);
                     }
                 }
             }
@@ -476,8 +626,8 @@
             const nx = playerX + dx;
             const ny = playerY + dy;
 
-            if (nx >= 0 && nx < MAZE_SIZE && ny >= 0 && ny < MAZE_SIZE && grid[ny][nx] !== 1) {
-                grid[playerY][playerX] = 2; // visited
+            if (nx >= 0 && nx < mazeSize && ny >= 0 && ny < mazeSize && grid[ny][nx] !== 1) {
+                grid[playerY][playerX] = 2;
                 playerX = nx;
                 playerY = ny;
                 moves++;
@@ -505,15 +655,17 @@
             const sec = elapsed % 60;
             document.getElementById('winStats').textContent =
                 `${moves} moves | ${min}:${sec.toString().padStart(2, '0')}`;
+            document.getElementById('qrResult').textContent =
+                `QR内容: "${currentInputText}"`;
             document.getElementById('winOverlay').classList.add('show');
         }
 
         function closeWin() {
             document.getElementById('winOverlay').classList.remove('show');
-            generateMaze();
+            generateFromInput();
         }
 
-        // Keyboard controls
+        // Keyboard
         document.addEventListener('keydown', (e) => {
             switch (e.key) {
                 case 'ArrowUp': case 'w': case 'W': move(0, -1); e.preventDefault(); break;
@@ -523,8 +675,16 @@
             }
         });
 
+        // Enter key in input
+        document.getElementById('qrInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                generateFromInput();
+            }
+        });
+
         // Init
-        generateMaze();
+        generateQRMaze('Hello World!');
     </script>
 </body>
 
